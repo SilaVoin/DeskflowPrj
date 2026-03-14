@@ -17,20 +17,16 @@ final _log = AppLogger.getLogger('Main');
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // [FIX] Use path-based URLs instead of hash (#) for deep link compatibility
   if (kIsWeb) usePathUrlStrategy();
 
   _log.i('Deskflow starting...');
 
-  // Set Russian locale for timeago (relative time formatting)
   timeago.setLocaleMessages('ru', timeago.RuMessages());
   timeago.setDefaultLocale('ru');
 
-  // [FIX] Load config from assets/env.json (runtime) with dart-define fallback
   final config = await AppConfig.load();
   AppConfig.instance = config;
 
-  // Initialize Supabase with validated config
   await Supabase.initialize(
     url: config.supabaseUrl,
     anonKey: config.supabaseAnonKey,
@@ -38,7 +34,6 @@ void main() async {
 
   _log.i('[FIX] Supabase initialized successfully');
 
-  // Force dark status bar for AMOLED theme
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -55,10 +50,6 @@ void main() async {
   );
 }
 
-/// Root application widget.
-///
-/// Uses [ProviderScope] for Riverpod and [GoRouter] for navigation.
-/// ConsumerWidget so the router can react to auth state changes.
 class DeskflowApp extends ConsumerWidget {
   const DeskflowApp({super.key});
 
@@ -67,8 +58,6 @@ class DeskflowApp extends ConsumerWidget {
     _log.d('Building DeskflowApp');
     final router = ref.watch(appRouterProvider);
 
-    // [FIX] Initialize auth token refresh watcher — automatically updates
-    // stored refresh tokens when Supabase SDK rotates them in the background.
     ref.watch(authTokenRefreshWatcherProvider);
 
     return MaterialApp.router(

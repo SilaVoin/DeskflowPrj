@@ -2,14 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:deskflow/core/theme/deskflow_theme.dart';
 
-/// Small capsule badge showing status text with a tinted background color.
-///
-/// ```dart
-/// StatusPillBadge(
-///   label: 'Новый',
-///   color: Colors.green,
-/// )
-/// ```
 class StatusPillBadge extends StatelessWidget {
   const StatusPillBadge({
     super.key,
@@ -19,7 +11,6 @@ class StatusPillBadge extends StatelessWidget {
 
   final String label;
 
-  /// Badge tint color. Defaults to [DeskflowColors.primary].
   final Color? color;
 
   @override

@@ -20,11 +20,11 @@ import 'package:deskflow/features/auth/presentation/login_screen.dart';
 import 'package:deskflow/features/auth/presentation/recovery_code_screen.dart';
 import 'package:deskflow/features/auth/presentation/register_screen.dart';
 import 'package:deskflow/features/auth/presentation/splash_screen.dart';
+import 'package:deskflow/features/chat/domain/chat_message.dart';
 import 'package:deskflow/features/orders/presentation/create_order_screen.dart';
 import 'package:deskflow/features/orders/presentation/edit_order_screen.dart';
 import 'package:deskflow/features/orders/presentation/order_detail_screen.dart';
 import 'package:deskflow/features/orders/presentation/orders_list_screen.dart';
-import 'package:deskflow/features/chat/domain/chat_message.dart';
 import 'package:deskflow/features/chat/presentation/order_chat_screen.dart';
 import 'package:deskflow/features/chat/presentation/attachment_preview_screen.dart';
 import 'package:deskflow/features/customers/presentation/customers_list_screen.dart';
@@ -47,11 +47,9 @@ part 'app_router.g.dart';
 
 final _log = AppLogger.getLogger('AppRouter');
 
-/// Global navigation key for root navigator.
 final GlobalKey<NavigatorState> _rootNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'root');
 
-/// Auth-aware routes that don't require authentication.
 const _publicRoutes = [
   '/',
   '/auth/login',
@@ -61,11 +59,6 @@ const _publicRoutes = [
   '/auth/recovery-code',
 ];
 
-/// GoRouter provider — reactive to auth state changes.
-///
-/// Uses [ref.listen] instead of [ref.watch] for auth/org providers to avoid
-/// rebuilding the entire GoRouter (which resets navigation stack). Instead,
-/// auth and org changes trigger redirect re-evaluation via [GoRouterRefreshStream].
 @Riverpod(keepAlive: true)
 GoRouter appRouter(Ref ref) {
   final supabaseClient = ref.watch(supabaseClientProvider);
@@ -75,7 +68,6 @@ GoRouter appRouter(Ref ref) {
   );
   ref.onDispose(refreshStream.dispose);
 
-  // Trigger redirect re-evaluation (NOT provider rebuild) on state changes
   ref.listen(currentOrgIdProvider, (_, _) => refreshStream.notify());
   ref.listen(isAuthenticatedProvider, (_, _) => refreshStream.notify());
   ref.listen(isSwitchingAccountProvider, (_, _) => refreshStream.notify());
@@ -86,8 +78,6 @@ GoRouter appRouter(Ref ref) {
     debugLogDiagnostics: true,
     refreshListenable: refreshStream,
     redirect: (context, state) {
-      // [FIX] Suppress redirects during account switch to prevent
-      // navigation to login between signOut and restoreSession.
       final isSwitching = ref.read(isSwitchingAccountProvider);
       if (isSwitching) {
         _log.d('redirect: suppressed (account switch in progress)');
@@ -98,38 +88,30 @@ GoRouter appRouter(Ref ref) {
       final isPublicRoute = _publicRoutes.contains(location);
       final isOrgRoute = location.startsWith('/org');
 
-      // [FIX] Read current values at redirect time (not captured at build time)
       final isLoggedIn = supabaseClient.auth.currentUser != null;
       final hasOrg = ref.read(currentOrgIdProvider) != null;
 
       _log.d('redirect: location=$location, isLoggedIn=$isLoggedIn, '
           'hasOrg=$hasOrg');
 
-      // Not logged in → force to login (unless already on public route)
       if (!isLoggedIn && !isPublicRoute) {
         _log.d('redirect → /auth/login (not authenticated)');
         return '/auth/login';
       }
 
-      // Logged in + on splash → redirect based on org state
       if (isLoggedIn && location == '/') {
         if (hasOrg) {
           _log.d('redirect → /orders (splash, has org)');
           return '/orders';
         }
-        // Let SplashScreen handle org loading and auto-select
         return null;
       }
 
-      // Logged in but on auth pages → redirect to org check
       if (isLoggedIn && isPublicRoute) {
-        // [FIX] Always allow verify-email and recovery-code for logged-in users
-        // (Supabase creates a session on signUp before email is verified)
         if (location == '/auth/verify-email' || location == '/auth/recovery-code') {
           _log.d('redirect: allowing $location (post-auth verification)');
           return null;
         }
-        // Allow auth routes when user is adding/switching account from Profile
         final isAddingAccount = ref.read(addingAccountProvider);
         if (isAddingAccount && (location == '/auth/register' || location == '/auth/login')) {
           _log.d('redirect: allowing $location (adding account)');
@@ -143,7 +125,6 @@ GoRouter appRouter(Ref ref) {
         return '/orders';
       }
 
-      // Logged in, past org selection, trying to access main routes
       if (isLoggedIn && !isPublicRoute && !isOrgRoute && !hasOrg) {
         _log.d('redirect → /org/select (no org selected)');
         return '/org/select';
@@ -152,7 +133,6 @@ GoRouter appRouter(Ref ref) {
       return null; // No redirect needed
     },
     routes: [
-    // ── Splash ────────────────────────────────────────────
     GoRoute(
       path: '/',
       builder: (context, state) {
@@ -161,7 +141,6 @@ GoRouter appRouter(Ref ref) {
       },
     ),
 
-    // ── Auth Flow (no nav bar) ────────────────────────────
     GoRoute(
       path: '/auth/login',
       builder: (context, state) {
@@ -200,7 +179,6 @@ GoRouter appRouter(Ref ref) {
       },
     ),
 
-    // ── Org Flow (no nav bar) ─────────────────────────────
     GoRoute(
       path: '/org/select',
       builder: (context, state) {
@@ -224,13 +202,11 @@ GoRouter appRouter(Ref ref) {
       },
     ),
 
-    // ── Main App (with floating island nav) ───────────────
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
         return MainShellScreen(navigationShell: navigationShell);
       },
       branches: [
-        // Tab 1: Orders
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -300,7 +276,6 @@ GoRouter appRouter(Ref ref) {
           ],
         ),
 
-        // Tab 2: Search
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -313,7 +288,6 @@ GoRouter appRouter(Ref ref) {
           ],
         ),
 
-        // Tab 3: Customers
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -362,7 +336,6 @@ GoRouter appRouter(Ref ref) {
           ],
         ),
 
-        // Tab 4: Profile
         StatefulShellBranch(
           routes: [
             GoRoute(
@@ -401,7 +374,6 @@ GoRouter appRouter(Ref ref) {
       ],
     ),
 
-    // ── Admin Routes ──────────────────────────────────────
     GoRoute(
       path: '/notifications',
       pageBuilder: (context, state) {
@@ -466,7 +438,6 @@ GoRouter appRouter(Ref ref) {
       ],
     ),
 
-    // ── Shared Entity Routes ──────────────────────────────
     GoRoute(
       path: '/products',
       builder: (context, state) {

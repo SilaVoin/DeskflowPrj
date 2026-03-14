@@ -10,13 +10,11 @@ import 'package:deskflow/features/org/domain/org_providers.dart';
 
 part 'customer_providers.g.dart';
 
-/// Customer repository singleton.
 @Riverpod(keepAlive: true)
 CustomerRepository customerRepository(Ref ref) {
   return CustomerRepository(ref.watch(supabaseClientProvider));
 }
 
-/// All customers for current org — paginated, supports search.
 @riverpod
 class CustomersList extends _$CustomersList {
   static const _pageSize = 20;
@@ -37,7 +35,6 @@ class CustomersList extends _$CustomersList {
     );
   }
 
-  /// Load next page and append to current items.
   Future<void> loadMore() async {
     final current = state.valueOrNull;
     if (current == null || !current.hasMore || current.isLoadingMore) return;
@@ -65,13 +62,11 @@ class CustomersList extends _$CustomersList {
   }
 }
 
-/// Single customer detail with stats.
 @riverpod
 Future<Customer> customerDetail(Ref ref, String customerId) async {
   return ref.watch(customerRepositoryProvider).getCustomer(customerId);
 }
 
-/// Orders for a specific customer.
 @riverpod
 Future<List<Order>> customerOrders(Ref ref, String customerId) async {
   return ref.watch(customerRepositoryProvider).getCustomerOrders(customerId);

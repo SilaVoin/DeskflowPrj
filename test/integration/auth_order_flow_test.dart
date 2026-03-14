@@ -15,7 +15,6 @@ import 'package:deskflow/features/orders/presentation/create_order_screen.dart';
 import 'package:deskflow/features/auth/domain/auth_providers.dart';
 import 'package:deskflow/features/org/domain/org_providers.dart';
 
-// ─────────────────────── Fixtures ────────────────────────────────────
 
 const _testUserId = 'user-int-1';
 const _testOrgId = 'org-int-1';
@@ -48,9 +47,7 @@ Order _fakeOrder() => Order(
       ),
     );
 
-// ─────────────────────── Fake notifiers ──────────────────────────────
 
-/// Fake AuthNotifier that simulates successful sign-in.
 class FakeAuthNotifier extends AuthNotifier {
   bool signInCalled = false;
   String? lastEmail;
@@ -78,13 +75,11 @@ class FakeAuthNotifier extends AuthNotifier {
   Future<bool> signInWithApple() async => true;
 }
 
-/// Fake CurrentOrgId notifier that returns a fixed org.
 class FakeCurrentOrgId extends CurrentOrgId {
   @override
   String? build() => _testOrgId;
 }
 
-/// Fake OrderNotifier that captures createOrder calls.
 class FakeOrderNotifier extends OrderNotifier {
   Order? createdOrder;
   int createOrderCallCount = 0;
@@ -106,7 +101,6 @@ class FakeOrderNotifier extends OrderNotifier {
   }
 }
 
-// ─────────────────────── Builders ────────────────────────────────────
 
 Widget _buildLoginScreen({FakeAuthNotifier? authNotifier}) {
   final notifier = authNotifier ?? FakeAuthNotifier();
@@ -158,7 +152,6 @@ Widget _buildCreateOrderScreen({FakeOrderNotifier? orderNotifier}) {
   );
 }
 
-// ──────────────────────── Tests ──────────────────────────────────────
 
 void main() {
   group('Auth flow', () {
@@ -167,11 +160,8 @@ void main() {
       await tester.pumpWidget(_buildLoginScreen());
       await tester.pumpAndSettle();
 
-      // Should show the heading
       expect(find.text('Войти в аккаунт'), findsOneWidget);
-      // Two text fields (email + password)
       expect(find.byType(TextField), findsNWidgets(2));
-      // Login button
       expect(find.text('Войти'), findsOneWidget);
     });
 
@@ -201,12 +191,10 @@ void main() {
       await tester.pumpWidget(_buildLoginScreen(authNotifier: fakeNotifier));
       await tester.pumpAndSettle();
 
-      // Fill fields
       final fields = find.byType(TextField);
       await tester.enterText(fields.at(0), 'user@test.com');
       await tester.enterText(fields.at(1), 'mysecret');
 
-      // Submit
       await tester.tap(find.text('Войти'));
       await tester.pumpAndSettle();
 
@@ -226,18 +214,15 @@ void main() {
       await tester.pumpWidget(_buildLoginScreen());
       await tester.pumpAndSettle();
 
-      // Password is initially obscured
       final passwordField = find.byType(TextField).last;
       await tester.enterText(passwordField, 'secret');
       await tester.pumpAndSettle();
 
-      // Find and tap the visibility toggle
       final toggleIcon = find.byIcon(Icons.visibility_off_rounded);
       if (toggleIcon.evaluate().isNotEmpty) {
         await tester.tap(toggleIcon);
         await tester.pumpAndSettle();
 
-        // After toggle, should show visibility icon
         expect(find.byIcon(Icons.visibility_rounded), findsOneWidget);
       }
     });
@@ -248,9 +233,7 @@ void main() {
       await tester.pumpWidget(_buildCreateOrderScreen());
       await tester.pumpAndSettle();
 
-      // Should show "Новый заказ" title
       expect(find.text('Новый заказ'), findsOneWidget);
-      // Should show save button
       expect(find.text('Сохранить'), findsOneWidget);
     });
 
@@ -261,7 +244,6 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Tap save button
       await tester.tap(find.text('Сохранить'));
       await tester.pumpAndSettle();
 
@@ -272,7 +254,6 @@ void main() {
       await tester.pumpWidget(_buildCreateOrderScreen());
       await tester.pumpAndSettle();
 
-      // Should show key form sections
       expect(find.textContaining('Клиент'), findsWidgets);
       expect(find.textContaining('Товары'), findsWidgets);
     });

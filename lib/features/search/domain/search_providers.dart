@@ -14,6 +14,8 @@ import 'package:deskflow/features/search/data/search_history_repository.dart';
 import 'package:deskflow/features/search/domain/search_controls.dart';
 import 'package:deskflow/features/search/domain/search_history_entry.dart';
 
+export 'package:deskflow/features/search/domain/search_controls.dart';
+
 part 'search_providers.g.dart';
 
 @Riverpod(keepAlive: true)
@@ -76,7 +78,6 @@ Future<List<SearchHistoryEntry>> searchHistory(Ref ref) async {
   return ref.watch(searchHistoryRepositoryProvider).listRecent(userId: user.id);
 }
 
-/// Browse a specific category without a search query.
 @riverpod
 Future<SearchResults> browseCategory(Ref ref) async {
   final orgId = ref.watch(currentOrgIdProvider);
@@ -139,7 +140,6 @@ Future<SearchResults> browseCategory(Ref ref) async {
   }
 }
 
-/// Universal search results across orders, customers, and products.
 @riverpod
 Future<SearchResults> universalSearch(Ref ref) async {
   final orgId = ref.watch(currentOrgIdProvider);
@@ -201,7 +201,6 @@ Future<SearchResults> universalSearch(Ref ref) async {
   }
 }
 
-/// Universal search result container.
 class SearchResults {
   final List<Order> orders;
   final List<Customer> customers;

@@ -9,7 +9,6 @@ import 'package:deskflow/features/org/domain/org_providers.dart';
 import 'package:deskflow/features/org/domain/organization.dart';
 import 'package:deskflow/features/profile/presentation/profile_screen.dart';
 
-/// Helper to build a testable ProfileScreen with provider overrides.
 Widget _buildTestApp({
   User? user,
   bool isOwner = false,

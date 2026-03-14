@@ -8,8 +8,6 @@ import 'package:deskflow/features/chat/domain/chat_message.dart';
 
 final _log = AppLogger.getLogger('AttachmentPreviewScreen');
 
-/// Full-screen attachment preview — images with pinch-to-zoom,
-/// files with download button.
 class AttachmentPreviewScreen extends StatelessWidget {
   const AttachmentPreviewScreen({super.key, required this.attachment});
 
@@ -81,7 +79,6 @@ class AttachmentPreviewScreen extends StatelessWidget {
   }
 }
 
-/// Full-screen image with pinch-to-zoom.
 class _ImagePreview extends StatelessWidget {
   const _ImagePreview({required this.url});
 
@@ -132,7 +129,6 @@ class _ImagePreview extends StatelessWidget {
   }
 }
 
-/// File preview — icon + download button.
 class _FilePreview extends StatelessWidget {
   const _FilePreview({required this.attachment});
 

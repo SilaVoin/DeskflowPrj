@@ -16,7 +16,6 @@ import 'package:deskflow/features/org/domain/org_providers.dart';
 
 final _log = AppLogger.getLogger('CreateOrgScreen');
 
-/// Create organization screen.
 class CreateOrgScreen extends ConsumerStatefulWidget {
   const CreateOrgScreen({super.key});
 
@@ -134,7 +133,6 @@ class _CreateOrgScreenState extends ConsumerState<CreateOrgScreen> {
                         },
                       ),
                       const SizedBox(height: DeskflowSpacing.lg),
-                      // Logo upload
                       GestureDetector(
                         onTap: _pickAvatar,
                         child: Container(

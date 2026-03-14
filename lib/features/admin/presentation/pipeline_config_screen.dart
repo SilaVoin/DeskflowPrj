@@ -4,7 +4,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:deskflow/core/theme/deskflow_theme.dart';
 import 'package:deskflow/core/utils/app_logger.dart';
 import 'package:deskflow/core/widgets/error_state_widget.dart';
+import 'package:deskflow/core/widgets/floating_island_nav.dart';
 import 'package:deskflow/core/widgets/glass_card.dart';
+import 'package:deskflow/core/widgets/glass_floating_action_button.dart';
 import 'package:deskflow/core/widgets/skeleton_loader.dart';
 import 'package:deskflow/core/widgets/status_pill_badge.dart';
 import 'package:deskflow/features/admin/domain/admin_providers.dart';
@@ -13,7 +15,6 @@ import 'package:deskflow/features/orders/domain/order_status.dart';
 
 final _log = AppLogger.getLogger('PipelineConfigScreen');
 
-/// Admin screen — configure order status pipeline (drag-and-drop list).
 class PipelineConfigScreen extends HookConsumerWidget {
   const PipelineConfigScreen({super.key});
 
@@ -26,10 +27,14 @@ class PipelineConfigScreen extends HookConsumerWidget {
       appBar: AppBar(
         title: const Text('Настройка статусов'),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: DeskflowColors.primarySolid,
-        child: const Icon(Icons.add_rounded),
-        onPressed: () => _showEditSheet(context, ref, null),
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(
+          bottom: FloatingIslandNav.totalHeight(context) + 16,
+        ),
+        child: GlassFloatingActionButton(
+          icon: Icons.add_rounded,
+          onPressed: () => _showEditSheet(context, ref, null),
+        ),
       ),
       body: pipelineAsync.when(
         data: (statuses) {
@@ -99,7 +104,6 @@ class PipelineConfigScreen extends HookConsumerWidget {
       return;
     }
 
-    // Check if orders use this status
     final count = await ref
         .read(adminRepositoryProvider)
         .countOrdersWithStatus(status.id);
@@ -174,7 +178,6 @@ class PipelineConfigScreen extends HookConsumerWidget {
   }
 }
 
-/// Single status card with drag handle.
 class _StatusCard extends StatelessWidget {
   final OrderStatus status;
   final VoidCallback onEdit;
@@ -194,7 +197,6 @@ class _StatusCard extends StatelessWidget {
       child: GlassCard(
         child: Row(
           children: [
-            // Drag handle
             const Icon(
               Icons.drag_handle_rounded,
               color: DeskflowColors.textTertiary,
@@ -202,7 +204,6 @@ class _StatusCard extends StatelessWidget {
             ),
             const SizedBox(width: DeskflowSpacing.md),
 
-            // Color dot
             Container(
               width: 14,
               height: 14,
@@ -213,7 +214,6 @@ class _StatusCard extends StatelessWidget {
             ),
             const SizedBox(width: DeskflowSpacing.md),
 
-            // Name + badges
             Expanded(
               child: Row(
                 children: [
@@ -245,7 +245,6 @@ class _StatusCard extends StatelessWidget {
               ),
             ),
 
-            // Menu
             PopupMenuButton<String>(
               icon: Icon(
                 Icons.more_vert_rounded,
@@ -280,7 +279,6 @@ class _StatusCard extends StatelessWidget {
   }
 }
 
-/// Loading skeleton.
 class _PipelineLoadingSkeleton extends StatelessWidget {
   const _PipelineLoadingSkeleton();
 

@@ -1,4 +1,3 @@
-/// Order item domain model — snapshot of product at time of order.
 class OrderItem {
   final String id;
   final String orderId;
@@ -6,7 +5,6 @@ class OrderItem {
   final String productName;
   final double unitPrice;
   final int quantity;
-  final DateTime createdAt;
 
   const OrderItem({
     required this.id,
@@ -14,11 +12,9 @@ class OrderItem {
     this.productId,
     required this.productName,
     required this.unitPrice,
-    required this.quantity,
-    required this.createdAt,
+    this.quantity = 1,
   });
 
-  /// Subtotal for this line item.
   double get subtotal => unitPrice * quantity;
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
@@ -29,7 +25,16 @@ class OrderItem {
       productName: json['product_name'] as String,
       unitPrice: (json['unit_price'] as num).toDouble(),
       quantity: json['quantity'] as int? ?? 1,
-      createdAt: DateTime.parse(json['created_at'] as String),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'order_id': orderId,
+      if (productId != null) 'product_id': productId,
+      'product_name': productName,
+      'unit_price': unitPrice,
+      'quantity': quantity,
+    };
   }
 }

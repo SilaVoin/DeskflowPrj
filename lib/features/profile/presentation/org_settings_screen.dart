@@ -4,16 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:deskflow/core/theme/deskflow_theme.dart';
-import 'package:deskflow/core/utils/pluralize_ru.dart';
 import 'package:deskflow/core/widgets/glass_card.dart';
 import 'package:deskflow/core/widgets/glass_text_field.dart';
 import 'package:deskflow/core/widgets/pill_button.dart';
+import 'package:deskflow/core/utils/pluralize_ru.dart';
 import 'package:deskflow/features/admin/domain/admin_providers.dart';
 import 'package:deskflow/features/org/domain/org_providers.dart';
 
-/// Organization settings screen (Owner only).
-///
-/// Allows editing org name and accessing member management.
 class OrgSettingsScreen extends HookConsumerWidget {
   const OrgSettingsScreen({super.key});
 
@@ -25,7 +22,6 @@ class OrgSettingsScreen extends HookConsumerWidget {
     final isLoading = useState(false);
     final initialized = useState(false);
 
-    // Initialize controller with org name
     orgsAsync.whenData((orgs) {
       if (!initialized.value) {
         final org = orgs.where((o) => o.id == orgId).firstOrNull;
@@ -81,7 +77,6 @@ class OrgSettingsScreen extends HookConsumerWidget {
             TextButton(
               onPressed: () async {
                 Navigator.pop(ctx);
-                // Second confirmation
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx2) => AlertDialog(
@@ -134,7 +129,6 @@ class OrgSettingsScreen extends HookConsumerWidget {
       );
     }
 
-    // Get member count
     final membersAsync = ref.watch(orgMembersProvider);
 
     return Scaffold(
@@ -147,7 +141,6 @@ class OrgSettingsScreen extends HookConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Basic settings
             GlassCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,7 +164,6 @@ class OrgSettingsScreen extends HookConsumerWidget {
 
             const SizedBox(height: DeskflowSpacing.lg),
 
-            // Members section
             GlassCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,7 +200,6 @@ class OrgSettingsScreen extends HookConsumerWidget {
 
             const SizedBox(height: DeskflowSpacing.xxl),
 
-            // Danger zone
             Container(
               decoration: BoxDecoration(
                 borderRadius:

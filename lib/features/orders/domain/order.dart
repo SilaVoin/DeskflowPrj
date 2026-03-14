@@ -1,7 +1,6 @@
 import 'package:deskflow/features/orders/domain/order_item.dart';
 import 'package:deskflow/features/orders/domain/order_status.dart';
 
-/// Order domain model.
 class Order {
   final String id;
   final String organizationId;
@@ -15,7 +14,6 @@ class Order {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  /// Joined relations (populated when fetching with select).
   final OrderStatus? status;
   final String? customerName;
   final List<OrderItem> items;
@@ -37,31 +35,25 @@ class Order {
     this.items = const [],
   });
 
-  /// Items subtotal (total_amount stores items-only sum).
   double get itemsTotal => totalAmount;
 
-  /// Grand total = items subtotal + delivery cost.
   double get grandTotal => totalAmount + deliveryCost;
 
-  /// Formatted order number with leading zeros.
   String get formattedNumber => '#${orderNumber.toString().padLeft(3, '0')}';
 
   factory Order.fromJson(Map<String, dynamic> json) {
-    // Parse joined status if present
     OrderStatus? status;
     if (json['order_statuses'] != null) {
       status = OrderStatus.fromJson(
           json['order_statuses'] as Map<String, dynamic>);
     }
 
-    // Parse customer name if joined
     String? customerName;
     if (json['customers'] != null) {
       customerName =
           (json['customers'] as Map<String, dynamic>)['name'] as String?;
     }
 
-    // Parse items if joined
     List<OrderItem> items = [];
     if (json['order_items'] != null) {
       items = (json['order_items'] as List)

@@ -13,13 +13,11 @@ part 'org_providers.g.dart';
 
 final _log = AppLogger.getLogger('OrgProviders');
 
-/// Org repository — keepAlive singleton.
 @Riverpod(keepAlive: true)
 OrgRepository orgRepository(Ref ref) {
   return OrgRepository(ref.watch(supabaseClientProvider));
 }
 
-/// List of organizations for the current user.
 @riverpod
 Future<List<Organization>> userOrganizations(Ref ref) async {
   final user = ref.watch(currentUserProvider);
@@ -27,24 +25,16 @@ Future<List<Organization>> userOrganizations(Ref ref) async {
   return ref.watch(orgRepositoryProvider).getUserOrganizations(user.id);
 }
 
-/// Currently selected organization ID.
-///
-/// Persisted across app lifecycle via keepAlive + SharedPreferences.
-/// Set when user picks an org on OrgSelectionScreen.
-/// [FIX] Auto-restores last selected org from SharedPreferences on app
-/// startup / deep link navigation to prevent org context loss.
 @Riverpod(keepAlive: true)
 class CurrentOrgId extends _$CurrentOrgId {
   static const _prefsKey = 'last_selected_org_id';
 
   @override
   String? build() {
-    // [FIX] Try to restore last org from SharedPreferences synchronously
     _restoreFromPrefs();
     return null;
   }
 
-  /// [FIX] Async restore — called during build; updates state when ready.
   Future<void> _restoreFromPrefs() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -68,7 +58,6 @@ class CurrentOrgId extends _$CurrentOrgId {
     _clearPrefs();
   }
 
-  /// [FIX] Persist selected org to SharedPreferences.
   Future<void> _persistToPrefs(String orgId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -79,7 +68,6 @@ class CurrentOrgId extends _$CurrentOrgId {
     }
   }
 
-  /// [FIX] Clear persisted org from SharedPreferences.
   Future<void> _clearPrefs() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -91,7 +79,6 @@ class CurrentOrgId extends _$CurrentOrgId {
   }
 }
 
-/// Current user's role in the selected organization.
 @riverpod
 Future<OrgRole> currentUserRole(Ref ref) async {
   final user = ref.watch(currentUserProvider);
@@ -102,14 +89,12 @@ Future<OrgRole> currentUserRole(Ref ref) async {
   return ref.watch(orgRepositoryProvider).getRole(user.id, orgId);
 }
 
-/// Whether current user is owner of the selected org.
 @riverpod
 bool isOwner(Ref ref) {
   final role = ref.watch(currentUserRoleProvider).valueOrNull;
   return role == OrgRole.owner;
 }
 
-/// Whether current user is owner or admin of the selected org.
 @riverpod
 bool isOwnerOrAdmin(Ref ref) {
   final role = ref.watch(currentUserRoleProvider).valueOrNull;

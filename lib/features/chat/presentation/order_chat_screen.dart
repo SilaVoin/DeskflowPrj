@@ -20,7 +20,6 @@ import 'package:deskflow/features/orders/domain/order_providers.dart';
 
 final _log = AppLogger.getLogger('OrderChatScreen');
 
-/// Realtime chat screen for a specific order.
 class OrderChatScreen extends HookConsumerWidget {
   const OrderChatScreen({super.key, required this.orderId});
 
@@ -42,7 +41,6 @@ class OrderChatScreen extends HookConsumerWidget {
     final typingUser = useState<String?>(null);
     final isLoadingOlder = useState(false);
 
-    // Wire up typing indicator callback
     useEffect(() {
       final notifier = ref.read(chatNotifierProvider(orderId).notifier);
       notifier.setOnTypingChanged((name) {
@@ -51,7 +49,6 @@ class OrderChatScreen extends HookConsumerWidget {
       return null;
     }, [orderId]);
 
-    // Scroll-to-top listener for pagination
     useEffect(() {
       void onScroll() {
         if (scrollController.position.pixels <=
@@ -71,7 +68,6 @@ class OrderChatScreen extends HookConsumerWidget {
       return () => scrollController.removeListener(onScroll);
     }, [scrollController]);
 
-    // Auto-scroll to bottom when new messages arrive
     ref.listen(chatNotifierProvider(orderId), (prev, next) {
       final prevLen = prev?.valueOrNull?.length ?? 0;
       final nextLen = next.valueOrNull?.length ?? 0;
@@ -87,8 +83,6 @@ class OrderChatScreen extends HookConsumerWidget {
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
         ),
-        // [FIX] Use Flexible + overflow protection to prevent RenderFlex overflow
-        // when status badge + title are wider than available AppBar space.
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -112,7 +106,6 @@ class OrderChatScreen extends HookConsumerWidget {
           if (orderAsync.hasValue && orderAsync.value!.status != null)
             Padding(
               padding: const EdgeInsets.only(right: DeskflowSpacing.md),
-              // ConstrainedBox limits badge width so it never squeezes title.
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 120),
                 child: StatusPillBadge(
@@ -125,7 +118,6 @@ class OrderChatScreen extends HookConsumerWidget {
       ),
       body: Column(
         children: [
-          // ── Messages list ──
           Expanded(
             child: chatAsync.when(
               loading: () => const _ChatLoadingSkeleton(),
@@ -138,7 +130,6 @@ class OrderChatScreen extends HookConsumerWidget {
                 if (messages.isEmpty) {
                   return const _EmptyChatState();
                 }
-                // Schedule scroll to bottom on first load
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   _scrollToBottom(scrollController, animate: false);
                 });
@@ -151,7 +142,6 @@ class OrderChatScreen extends HookConsumerWidget {
                   ),
                   itemCount: messages.length + 1, // +1 for load-older header
                   itemBuilder: (context, index) {
-                    // First item: loading indicator or "load older" hint
                     if (index == 0) {
                       if (isLoadingOlder.value) {
                         return const Padding(
@@ -168,7 +158,6 @@ class OrderChatScreen extends HookConsumerWidget {
                           ),
                         );
                       }
-                      // Empty space — pagination triggers via scroll listener
                       return const SizedBox(height: DeskflowSpacing.sm);
                     }
 
@@ -176,14 +165,12 @@ class OrderChatScreen extends HookConsumerWidget {
                     final message = messages[msgIndex];
                     final isMe = message.senderId == currentUserId;
 
-                    // Show date separator if needed
                     final showDate = msgIndex == 0 ||
                         !_isSameDay(
                           messages[msgIndex - 1].createdAt,
                           message.createdAt,
                         );
 
-                    // Show sender name if different from previous
                     final showSender = !isMe &&
                         !message.isSystem &&
                         (msgIndex == 0 ||
@@ -219,7 +206,6 @@ class OrderChatScreen extends HookConsumerWidget {
             ),
           ),
 
-          // ── Selected files preview ──
           if (selectedFiles.value.isNotEmpty)
             _SelectedFilesBar(
               files: selectedFiles.value,
@@ -230,11 +216,9 @@ class OrderChatScreen extends HookConsumerWidget {
               },
             ),
 
-          // ── Typing indicator ──
           if (typingUser.value != null)
             _TypingIndicator(userName: typingUser.value!),
 
-          // ── Input bar ──
           _ChatInputBar(
             controller: textController,
             focusNode: focusNode,
@@ -242,7 +226,6 @@ class OrderChatScreen extends HookConsumerWidget {
             hasAttachments: selectedFiles.value.isNotEmpty,
             onTextChanged: (text) {
               isComposing.value = text.trim().isNotEmpty;
-              // Send typing indicator (debounced)
               ref
                   .read(chatNotifierProvider(orderId).notifier)
                   .notifyTyping();
@@ -308,7 +291,6 @@ class OrderChatScreen extends HookConsumerWidget {
   ) {
     showModalBottomSheet(
       context: context,
-      // [FIX] Use opaque surface so attachment options don’t blend with chat.
       backgroundColor: DeskflowColors.modalSurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
@@ -379,9 +361,6 @@ class OrderChatScreen extends HookConsumerWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Chat bubble
-// ═══════════════════════════════════════════════════════════════════
 
 class _ChatBubble extends StatelessWidget {
   const _ChatBubble({
@@ -407,7 +386,6 @@ class _ChatBubble extends StatelessWidget {
             isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Avatar for other users
           if (!isMe) ...[
             if (showSender)
               _Avatar(initials: message.senderInitials)
@@ -416,13 +394,11 @@ class _ChatBubble extends StatelessWidget {
             const SizedBox(width: DeskflowSpacing.sm),
           ],
 
-          // Bubble
           Flexible(
             child: Column(
               crossAxisAlignment:
                   isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
-                // Sender name
                 if (showSender && message.senderName != null)
                   Padding(
                     padding: const EdgeInsets.only(
@@ -437,7 +413,6 @@ class _ChatBubble extends StatelessWidget {
                     ),
                   ),
 
-                // Message container
                 Container(
                   constraints: BoxConstraints(
                     maxWidth: MediaQuery.of(context).size.width * 0.75,
@@ -468,7 +443,6 @@ class _ChatBubble extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Attachments
                       if (message.attachments.isNotEmpty) ...[
                         ...message.attachments.map(
                           (att) => _AttachmentWidget(
@@ -480,14 +454,12 @@ class _ChatBubble extends StatelessWidget {
                           const SizedBox(height: DeskflowSpacing.xs),
                       ],
 
-                      // Text
                       if (message.text != null)
                         Text(
                           message.text!,
                           style: DeskflowTypography.body,
                         ),
 
-                      // Time & status
                       const SizedBox(height: DeskflowSpacing.xs),
                       Row(
                         mainAxisSize: MainAxisSize.min,
@@ -514,7 +486,6 @@ class _ChatBubble extends StatelessWidget {
             ),
           ),
 
-          // Retry button for failed messages
           if (message.status == MessageStatus.error && onRetry != null) ...[
             const SizedBox(width: DeskflowSpacing.xs),
             GestureDetector(
@@ -537,9 +508,6 @@ class _ChatBubble extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Message status icon
-// ═══════════════════════════════════════════════════════════════════
 
 class _StatusIcon extends StatelessWidget {
   const _StatusIcon({required this.status});
@@ -571,9 +539,6 @@ class _StatusIcon extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Avatar
-// ═══════════════════════════════════════════════════════════════════
 
 class _Avatar extends StatelessWidget {
   const _Avatar({required this.initials});
@@ -606,9 +571,6 @@ class _Avatar extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Attachment widget (inline in bubble)
-// ═══════════════════════════════════════════════════════════════════
 
 class _AttachmentWidget extends StatelessWidget {
   const _AttachmentWidget({
@@ -662,7 +624,6 @@ class _AttachmentWidget extends StatelessWidget {
       );
     }
 
-    // Non-image file
     return GestureDetector(
       onTap: () => context.push(
         '/orders/$orderId/chat/attachment',
@@ -708,9 +669,6 @@ class _AttachmentWidget extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// System message (centered, small text)
-// ═══════════════════════════════════════════════════════════════════
 
 class _SystemMessage extends StatelessWidget {
   const _SystemMessage({required this.message});
@@ -742,9 +700,6 @@ class _SystemMessage extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Date separator
-// ═══════════════════════════════════════════════════════════════════
 
 class _DateSeparator extends StatelessWidget {
   const _DateSeparator({required this.date});
@@ -791,9 +746,6 @@ class _DateSeparator extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Input bar
-// ═══════════════════════════════════════════════════════════════════
 
 class _ChatInputBar extends StatelessWidget {
   const _ChatInputBar({
@@ -839,7 +791,6 @@ class _ChatInputBar extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // Attachment button
             IconButton(
               onPressed: onAttach,
               icon: const Icon(Icons.attach_file_rounded),
@@ -847,7 +798,6 @@ class _ChatInputBar extends StatelessWidget {
               iconSize: 24,
             ),
 
-            // Text field
             Expanded(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 120),
@@ -899,7 +849,6 @@ class _ChatInputBar extends StatelessWidget {
 
             const SizedBox(width: DeskflowSpacing.xs),
 
-            // Send button
             Container(
               width: 40,
               height: 40,
@@ -926,9 +875,6 @@ class _ChatInputBar extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Selected files bar (before sending)
-// ═══════════════════════════════════════════════════════════════════
 
 class _SelectedFilesBar extends StatelessWidget {
   const _SelectedFilesBar({
@@ -939,7 +885,6 @@ class _SelectedFilesBar extends StatelessWidget {
   final List<XFile> files;
   final void Function(int index) onRemove;
 
-  /// [FIX] Check if file is an image by extension.
   static bool _isImageFile(String name) {
     final ext = name.split('.').last.toLowerCase();
     return {'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'}.contains(ext);
@@ -996,7 +941,6 @@ class _SelectedFilesBar extends StatelessWidget {
                       width: 0.5,
                     ),
                   ),
-                  // [FIX] Show image thumbnail for images, filename chip for files
                   child: isImage
                       ? ClipRRect(
                           borderRadius:
@@ -1090,9 +1034,6 @@ class _SelectedFilesBar extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Empty & loading states
-// ═══════════════════════════════════════════════════════════════════
 
 class _EmptyChatState extends StatelessWidget {
   const _EmptyChatState();
@@ -1141,7 +1082,6 @@ class _ChatLoadingSkeleton extends StatelessWidget {
       child: Column(
         children: [
           const SizedBox(height: DeskflowSpacing.xl),
-          // Simulate message skeletons
           Align(
             alignment: Alignment.centerLeft,
             child: SkeletonLoader.box(
@@ -1179,7 +1119,6 @@ class _ChatLoadingSkeleton extends StatelessWidget {
   }
 }
 
-/// Animated typing indicator — "X печатает..."
 class _TypingIndicator extends StatefulWidget {
   final String userName;
 
@@ -1221,7 +1160,6 @@ class _TypingIndicatorState extends State<_TypingIndicator>
       child: AnimatedBuilder(
         animation: _animation,
         builder: (context, child) {
-          // Cycle through 1–3 dots
           final dotCount = (_animation.value * 3).floor() % 3 + 1;
           final dots = '.' * dotCount;
           return Text(

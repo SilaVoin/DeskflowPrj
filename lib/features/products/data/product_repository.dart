@@ -8,15 +8,12 @@ import 'package:deskflow/features/products/domain/product.dart';
 
 final _log = AppLogger.getLogger('ProductRepository');
 
-/// Handles all product (catalog) database operations.
 class ProductRepository {
   final SupabaseClient _client;
 
   ProductRepository(this._client);
 
-  // ──────────────────────────── List ─────────────────────────────────
 
-  /// Fetch products for an organization.
   Future<List<Product>> getProducts({
     required String orgId,
     String? search,
@@ -51,9 +48,7 @@ class ProductRepository {
     });
   }
 
-  // ──────────────────────────── Detail ───────────────────────────────
 
-  /// Fetch single product.
   Future<Product> getProduct(String productId) async {
     _log.d('getProduct: productId=$productId');
     return supabaseGuard(() async {
@@ -67,9 +62,7 @@ class ProductRepository {
     });
   }
 
-  // ──────────────────────────── Create / Update ─────────────────────
 
-  /// Create a new product.
   Future<Product> createProduct({
     required String orgId,
     required String name,
@@ -100,7 +93,6 @@ class ProductRepository {
     });
   }
 
-  /// Update a product.
   Future<Product> updateProduct({
     required String productId,
     required String name,
@@ -130,7 +122,6 @@ class ProductRepository {
     });
   }
 
-  /// Soft-delete: toggle active status.
   Future<void> toggleActive(String productId, bool isActive) async {
     _log.d('toggleActive: productId=$productId, isActive=$isActive');
     return supabaseGuard(() async {
@@ -141,12 +132,7 @@ class ProductRepository {
     });
   }
 
-  // ──────────────────────────── Storage ──────────────────────────────
 
-  /// Upload a product image to Supabase Storage.
-  ///
-  /// Returns the public URL of the uploaded image.
-  /// Path format: `{orgId}/{productId}_{timestamp}.{ext}`
   Future<String> uploadProductImage({
     required String orgId,
     required String productId,
@@ -155,11 +141,9 @@ class ProductRepository {
   }) async {
     _log.d('uploadProductImage: productId=$productId');
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    // [FIX] Normalize ext for file path
     final normalizedExt = fileExt == 'jpeg' ? 'jpg' : fileExt;
     final path = '$orgId/${productId}_$timestamp.$normalizedExt';
 
-    // [FIX] Map to correct MIME type ('jpg' -> 'image/jpeg', not 'image/jpg')
     const mimeMap = {
       'jpg': 'image/jpeg',
       'jpeg': 'image/jpeg',

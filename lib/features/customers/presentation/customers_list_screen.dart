@@ -5,6 +5,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 
 import 'package:deskflow/core/theme/deskflow_theme.dart';
 import 'package:deskflow/core/widgets/glass_card.dart';
+import 'package:deskflow/core/widgets/glass_floating_action_button.dart';
 import 'package:deskflow/core/widgets/pill_search_bar.dart';
 import 'package:deskflow/core/widgets/empty_state_widget.dart';
 import 'package:deskflow/core/widgets/error_state_widget.dart';
@@ -13,8 +14,6 @@ import 'package:deskflow/core/widgets/skeleton_loader.dart';
 import 'package:deskflow/features/customers/domain/customer_providers.dart';
 import 'package:deskflow/features/orders/domain/customer.dart';
 
-/// Customers list screen — shows all customers with search,
-/// pull-to-refresh, and navigation to detail/create.
 class CustomersListScreen extends HookConsumerWidget {
   const CustomersListScreen({super.key});
 
@@ -45,7 +44,7 @@ class CustomersListScreen extends HookConsumerWidget {
     }, [scrollController, searchQuery.value]);
 
     return Scaffold(
-      backgroundColor: DeskflowColors.background,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Клиенты'),
         leading: context.canPop()
@@ -57,7 +56,6 @@ class CustomersListScreen extends HookConsumerWidget {
       ),
       body: Column(
         children: [
-          // Search bar
           Padding(
             padding: const EdgeInsets.fromLTRB(
               DeskflowSpacing.lg,
@@ -71,7 +69,6 @@ class CustomersListScreen extends HookConsumerWidget {
             ),
           ),
 
-          // Customer list
           Expanded(
             child: customersAsync.when(
               data: (paginated) {
@@ -142,21 +139,17 @@ class CustomersListScreen extends HookConsumerWidget {
       ),
       floatingActionButton: Padding(
         padding: EdgeInsets.only(
-          // [FIX] Dynamic FAB offset — fixes Samsung One UI 7 positioning
           bottom: FloatingIslandNav.totalHeight(context) + 16,
         ),
-        child: FloatingActionButton(
-          backgroundColor: DeskflowColors.primarySolid,
+        child: GlassFloatingActionButton(
+          icon: Icons.person_add_rounded,
           onPressed: () => context.push('/customers/create'),
-          shape: const CircleBorder(),
-          child: const Icon(Icons.person_add_rounded, color: Colors.white),
         ),
       ),
     );
   }
 }
 
-/// Single customer row card.
 class _CustomerCard extends StatelessWidget {
   final Customer customer;
   final VoidCallback onTap;
@@ -174,7 +167,6 @@ class _CustomerCard extends StatelessWidget {
         padding: const EdgeInsets.all(DeskflowSpacing.lg),
         child: Row(
           children: [
-            // Avatar
             Container(
               width: 44,
               height: 44,
@@ -192,7 +184,6 @@ class _CustomerCard extends StatelessWidget {
             ),
             const SizedBox(width: DeskflowSpacing.md),
 
-            // Name + contact
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,7 +205,6 @@ class _CustomerCard extends StatelessWidget {
               ),
             ),
 
-            // Order count badge
             if (customer.orderCount > 0) ...[
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -247,7 +237,6 @@ class _CustomerCard extends StatelessWidget {
   }
 }
 
-/// Loading skeleton for customers list.
 class _CustomersLoadingSkeleton extends StatelessWidget {
   const _CustomersLoadingSkeleton();
 

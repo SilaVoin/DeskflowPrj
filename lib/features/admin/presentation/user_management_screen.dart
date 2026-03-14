@@ -4,7 +4,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:deskflow/core/theme/deskflow_theme.dart';
 import 'package:deskflow/core/widgets/error_state_widget.dart';
+import 'package:deskflow/core/widgets/floating_island_nav.dart';
 import 'package:deskflow/core/widgets/glass_card.dart';
+import 'package:deskflow/core/widgets/glass_floating_action_button.dart';
 import 'package:deskflow/core/widgets/skeleton_loader.dart';
 import 'package:deskflow/core/widgets/status_pill_badge.dart';
 import 'package:deskflow/features/admin/data/admin_repository.dart';
@@ -12,7 +14,6 @@ import 'package:deskflow/features/admin/domain/admin_providers.dart';
 import 'package:deskflow/features/auth/domain/auth_providers.dart';
 import 'package:deskflow/features/org/domain/org_member.dart';
 
-/// Admin screen — displays and manages organization members.
 class UserManagementScreen extends HookConsumerWidget {
   const UserManagementScreen({super.key});
 
@@ -26,10 +27,14 @@ class UserManagementScreen extends HookConsumerWidget {
       appBar: AppBar(
         title: const Text('Участники'),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: DeskflowColors.primarySolid,
-        child: const Icon(Icons.person_add_rounded),
-        onPressed: () => context.push('/admin/users/invite'),
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(
+          bottom: FloatingIslandNav.totalHeight(context) + 16,
+        ),
+        child: GlassFloatingActionButton(
+          icon: Icons.person_add_rounded,
+          onPressed: () => context.push('/admin/users/invite'),
+        ),
       ),
       body: membersAsync.when(
         skipLoadingOnRefresh: false,
@@ -83,7 +88,6 @@ class UserManagementScreen extends HookConsumerWidget {
     MemberWithProfile member,
     List<MemberWithProfile> allMembers,
   ) {
-    // Check if this is the only owner
     final ownerCount =
         allMembers.where((m) => m.role == OrgRole.owner).length;
     if (member.role == OrgRole.owner && ownerCount <= 1) {
@@ -95,7 +99,6 @@ class UserManagementScreen extends HookConsumerWidget {
       return;
     }
 
-    // Available roles to pick from (excluding current role)
     final availableRoles =
         OrgRole.values.where((r) => r != member.role).toList();
 
@@ -107,7 +110,6 @@ class UserManagementScreen extends HookConsumerWidget {
           return SimpleDialogOption(
             onPressed: () async {
               Navigator.pop(ctx);
-              // Show loading SnackBar while changing role
               if (context.mounted) {
                 ScaffoldMessenger.of(context)
                   ..hideCurrentSnackBar()
@@ -171,7 +173,6 @@ class UserManagementScreen extends HookConsumerWidget {
     MemberWithProfile member,
     List<MemberWithProfile> allMembers,
   ) {
-    // Check if this is the only owner
     final ownerCount =
         allMembers.where((m) => m.role == OrgRole.owner).length;
     if (member.role == OrgRole.owner && ownerCount <= 1) {
@@ -222,7 +223,6 @@ class UserManagementScreen extends HookConsumerWidget {
   }
 }
 
-/// Single member card.
 class _MemberCard extends StatelessWidget {
   final MemberWithProfile member;
   final bool isCurrentUser;
@@ -247,7 +247,6 @@ class _MemberCard extends StatelessWidget {
     return GlassCard(
       child: Row(
         children: [
-          // Avatar
           Container(
             width: 44,
             height: 44,
@@ -270,7 +269,6 @@ class _MemberCard extends StatelessWidget {
           ),
           const SizedBox(width: DeskflowSpacing.md),
 
-          // Name + email
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,10 +307,8 @@ class _MemberCard extends StatelessWidget {
 
           const SizedBox(width: DeskflowSpacing.sm),
 
-          // Role badge
           StatusPillBadge(label: member.role.label, color: roleColor),
 
-          // Menu (not for current user if sole owner)
           if (!isCurrentUser)
             PopupMenuButton<String>(
               icon: Icon(
@@ -347,7 +343,6 @@ class _MemberCard extends StatelessWidget {
   }
 }
 
-/// Loading skeleton.
 class _MembersLoadingSkeleton extends StatelessWidget {
   const _MembersLoadingSkeleton();
 

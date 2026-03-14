@@ -2,24 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:deskflow/core/theme/deskflow_theme.dart';
 
-/// Pill-shaped (capsule / stadium) button with Liquid Glass styling.
-///
-/// Variants:
-/// - **primary** — blue glass fill (default)
-/// - **secondary** — neutral glass fill
-/// - **destructive** — red glass fill
-///
-/// ```dart
-/// PillButton(
-///   label: 'Сохранить',
-///   onPressed: () {},
-/// )
-///
-/// PillButton.secondary(
-///   label: 'Отмена',
-///   onPressed: () {},
-/// )
-/// ```
 class PillButton extends StatelessWidget {
   const PillButton({
     super.key,
@@ -33,7 +15,6 @@ class PillButton extends StatelessWidget {
     this.height = 48,
   });
 
-  /// Primary (blue) variant — default constructor.
   factory PillButton.primary({
     Key? key,
     required String label,
@@ -53,7 +34,6 @@ class PillButton extends StatelessWidget {
     );
   }
 
-  /// Secondary (neutral glass) variant.
   factory PillButton.secondary({
     Key? key,
     required String label,
@@ -73,7 +53,6 @@ class PillButton extends StatelessWidget {
     );
   }
 
-  /// Destructive (red) variant.
   factory PillButton.destructive({
     Key? key,
     required String label,

@@ -12,7 +12,6 @@ import 'package:deskflow/core/widgets/glass_card.dart';
 import 'package:deskflow/core/widgets/pill_button.dart';
 import 'package:deskflow/features/auth/domain/auth_notifier.dart';
 
-/// Email verification screen — user enters 6-digit OTP code.
 class EmailVerificationScreen extends ConsumerStatefulWidget {
   final String email;
 
@@ -64,12 +63,10 @@ class _EmailVerificationScreenState
 
   void _onDigitChanged(int index, String value) {
     if (value.length == 1 && index < _codeLength - 1) {
-      // Move to next field
       _focusNodes[index + 1].requestFocus();
     }
     setState(() {}); // Rebuild for button state
 
-    // Auto-submit when all digits entered
     if (_isCodeComplete) {
       _handleVerify();
     }
@@ -80,7 +77,6 @@ class _EmailVerificationScreenState
         event.logicalKey == LogicalKeyboardKey.backspace &&
         _controllers[index].text.isEmpty &&
         index > 0) {
-      // Move to previous field on backspace when current is empty
       _controllers[index - 1].clear();
       _focusNodes[index - 1].requestFocus();
       setState(() {});
@@ -125,7 +121,6 @@ class _EmailVerificationScreenState
 
     if (success && mounted) {
       _startCooldown();
-      // Clear existing code
       for (final c in _controllers) {
         c.clear();
       }
@@ -146,7 +141,6 @@ class _EmailVerificationScreenState
     final isLoading = authState.isLoading;
     final canResend = _cooldownSeconds == 0 && !isLoading;
 
-    // Listen for errors
     ref.listen<AsyncValue<void>>(authNotifierProvider, (_, next) {
       if (next.hasError) {
         final error = next.error;
@@ -162,7 +156,6 @@ class _EmailVerificationScreenState
       }
     });
 
-    // Mask email: sol***@gmail.com
     final maskedEmail = _maskEmail(widget.email);
 
     return Scaffold(
@@ -180,7 +173,6 @@ class _EmailVerificationScreenState
             children: [
               const SizedBox(height: DeskflowSpacing.xl),
 
-              // Lock icon
               Container(
                 width: 72,
                 height: 72,
@@ -208,7 +200,6 @@ class _EmailVerificationScreenState
               ),
               const SizedBox(height: DeskflowSpacing.xxl),
 
-              // PIN code input
               GlassCard(
                 child: Column(
                   children: [
@@ -271,7 +262,6 @@ class _EmailVerificationScreenState
                                 ),
                                 onChanged: (value) {
                                   if (value.length > 1) {
-                                    // Handle paste into single field
                                     _handlePaste(value);
                                   } else {
                                     _onDigitChanged(i, value);
@@ -298,7 +288,6 @@ class _EmailVerificationScreenState
 
               const SizedBox(height: DeskflowSpacing.xl),
 
-              // Resend button
               TextButton(
                 onPressed: canResend ? _handleResend : null,
                 child: Text(
@@ -330,7 +319,6 @@ class _EmailVerificationScreenState
     );
   }
 
-  /// Masks email: soloveuiv@gmail.com → sol***@gmail.com
   String _maskEmail(String email) {
     if (email.isEmpty || !email.contains('@')) return email;
     final parts = email.split('@');

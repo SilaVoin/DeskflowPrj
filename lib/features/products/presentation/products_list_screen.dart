@@ -5,6 +5,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 
 import 'package:deskflow/core/theme/deskflow_theme.dart';
 import 'package:deskflow/core/widgets/glass_card.dart';
+import 'package:deskflow/core/widgets/glass_floating_action_button.dart';
 import 'package:deskflow/core/widgets/pill_search_bar.dart';
 import 'package:deskflow/core/widgets/empty_state_widget.dart';
 import 'package:deskflow/core/widgets/error_state_widget.dart';
@@ -13,10 +14,6 @@ import 'package:deskflow/core/widgets/skeleton_loader.dart';
 import 'package:deskflow/features/products/domain/product.dart';
 import 'package:deskflow/features/products/domain/product_providers.dart';
 
-/// Products list (catalog) screen.
-///
-/// Members see read-only catalog. Owners can add/edit products
-/// via FAB → admin catalog routes.
 class ProductsListScreen extends HookConsumerWidget {
   const ProductsListScreen({super.key});
 
@@ -61,7 +58,6 @@ class ProductsListScreen extends HookConsumerWidget {
       ),
       body: Column(
         children: [
-          // Search bar
           Padding(
             padding: const EdgeInsets.fromLTRB(
               DeskflowSpacing.lg,
@@ -75,7 +71,6 @@ class ProductsListScreen extends HookConsumerWidget {
             ),
           ),
 
-          // Products grid
           Expanded(
             child: productsAsync.when(
               data: (paginated) {
@@ -145,24 +140,19 @@ class ProductsListScreen extends HookConsumerWidget {
           ),
         ],
       ),
-      // FAB for owner to add products (navigates to admin catalog)
       floatingActionButton: Padding(
         padding: EdgeInsets.only(
-          // [FIX] Dynamic FAB offset — fixes Samsung One UI 7 positioning
           bottom: FloatingIslandNav.totalHeight(context) + 16,
         ),
-        child: FloatingActionButton(
-          backgroundColor: DeskflowColors.primarySolid,
+        child: GlassFloatingActionButton(
+          icon: Icons.add_rounded,
           onPressed: () => context.push('/admin/catalog/create'),
-          shape: const CircleBorder(),
-          child: const Icon(Icons.add_rounded, color: Colors.white),
         ),
       ),
     );
   }
 }
 
-/// Single product card.
 class _ProductCard extends StatelessWidget {
   final Product product;
   final VoidCallback onTap;
@@ -180,7 +170,6 @@ class _ProductCard extends StatelessWidget {
         padding: const EdgeInsets.all(DeskflowSpacing.lg),
         child: Row(
           children: [
-            // Thumbnail / icon
             Container(
               width: 48,
               height: 48,
@@ -205,7 +194,6 @@ class _ProductCard extends StatelessWidget {
             ),
             const SizedBox(width: DeskflowSpacing.md),
 
-            // Name + SKU
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,7 +215,6 @@ class _ProductCard extends StatelessWidget {
               ),
             ),
 
-            // Price
             Text(
               product.formattedPrice,
               style: DeskflowTypography.body.copyWith(
@@ -235,7 +222,6 @@ class _ProductCard extends StatelessWidget {
               ),
             ),
 
-            // Inactive indicator
             if (!product.isActive) ...[
               const SizedBox(width: DeskflowSpacing.sm),
               Container(
@@ -271,7 +257,6 @@ class _ProductCard extends StatelessWidget {
   }
 }
 
-/// Loading skeleton for products list.
 class _ProductsLoadingSkeleton extends StatelessWidget {
   const _ProductsLoadingSkeleton();
 

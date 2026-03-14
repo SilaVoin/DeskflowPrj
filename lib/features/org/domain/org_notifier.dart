@@ -10,17 +10,12 @@ part 'org_notifier.g.dart';
 
 final _log = AppLogger.getLogger('OrgNotifier');
 
-/// Manages organization create / join actions.
 @Riverpod(keepAlive: true)
 class OrgNotifier extends _$OrgNotifier {
   @override
   FutureOr<void> build() {
-    // No initial async work.
   }
 
-  /// Create a new organization and select it.
-  ///
-  /// Returns the created [Organization] or `null` on error.
   Future<Organization?> createOrganization(String name) async {
     final user = ref.read(currentUserProvider);
     if (user == null) return null;
@@ -34,14 +29,12 @@ class OrgNotifier extends _$OrgNotifier {
           );
       createdOrg = org;
       ref.read(currentOrgIdProvider.notifier).select(org.id);
-      // Invalidate org list so it re-fetches
       ref.invalidate(userOrganizationsProvider);
       _log.i('Organization created: ${org.name}');
     });
     return state.hasError ? null : createdOrg;
   }
 
-  /// Join an organization by invite code and select it.
   Future<bool> joinByInviteCode(String code) async {
     final user = ref.read(currentUserProvider);
     if (user == null) return false;
@@ -110,7 +103,6 @@ class OrgNotifier extends _$OrgNotifier {
     return state.hasError ? const [] : acceptedOrganizations;
   }
 
-  /// Select an existing organization from the list.
   void selectOrganization(Organization org) {
     ref.read(currentOrgIdProvider.notifier).select(org.id);
     _log.i('Selected organization: ${org.name}');

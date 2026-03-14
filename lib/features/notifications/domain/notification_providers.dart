@@ -15,13 +15,11 @@ part 'notification_providers.g.dart';
 
 final _log = AppLogger.getLogger('NotificationProviders');
 
-/// Notification repository — keepAlive singleton.
 @Riverpod(keepAlive: true)
 NotificationRepository notificationRepository(Ref ref) {
   return NotificationRepository(ref.watch(supabaseClientProvider));
 }
 
-/// Unread notification count for the current org — auto-refreshes via Realtime.
 @riverpod
 class UnreadNotificationCount extends _$UnreadNotificationCount {
   RealtimeChannel? _channel;
@@ -36,7 +34,6 @@ class UnreadNotificationCount extends _$UnreadNotificationCount {
       return 0;
     }
 
-    // Subscribe to realtime for auto-refresh
     _subscribeToRealtime(user.id);
 
     ref.onDispose(() {
@@ -65,7 +62,6 @@ class UnreadNotificationCount extends _$UnreadNotificationCount {
     );
   }
 
-  /// Decrement count when a notification is marked as read.
   void decrement() {
     final current = state.valueOrNull ?? 0;
     if (current > 0) {
@@ -73,13 +69,11 @@ class UnreadNotificationCount extends _$UnreadNotificationCount {
     }
   }
 
-  /// Reset to zero (e.g., after mark all as read).
   void reset() {
     state = const AsyncData(0);
   }
 }
 
-/// Full notifications list for the current org.
 @riverpod
 class NotificationsList extends _$NotificationsList {
   @override
@@ -98,12 +92,10 @@ class NotificationsList extends _$NotificationsList {
     return list;
   }
 
-  /// Mark a notification as read (optimistic update).
   Future<void> markAsRead(String notificationId) async {
     _log.d('[FIX] NotificationsList.markAsRead: id=$notificationId');
     final repo = ref.read(notificationRepositoryProvider);
 
-    // Optimistic update
     state = AsyncData(
       (state.valueOrNull ?? []).map((n) {
         if (n.id == notificationId && !n.isRead) {
@@ -117,7 +109,6 @@ class NotificationsList extends _$NotificationsList {
     await repo.markAsRead(notificationId);
   }
 
-  /// Mark all as read (optimistic update).
   Future<void> markAllAsRead() async {
     final orgId = ref.read(currentOrgIdProvider);
     if (orgId == null) return;
@@ -125,7 +116,6 @@ class NotificationsList extends _$NotificationsList {
     _log.d('[FIX] NotificationsList.markAllAsRead: orgId=$orgId');
     final repo = ref.read(notificationRepositoryProvider);
 
-    // Optimistic update
     state = AsyncData(
       (state.valueOrNull ?? []).map((n) => n.copyWith(isRead: true)).toList(),
     );

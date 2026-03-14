@@ -12,13 +12,11 @@ import 'package:deskflow/core/utils/app_logger.dart';
 
 final _log = AppLogger.getLogger('AuthRepository');
 
-/// Handles all Supabase Auth operations.
 class AuthRepository {
   final SupabaseClient _client;
 
   AuthRepository(this._client);
 
-  /// Sign in with email + password.
   Future<AuthResponse> signInWithEmail({
     required String email,
     required String password,
@@ -30,7 +28,6 @@ class AuthRepository {
         ));
   }
 
-  /// Create a new account.
   Future<AuthResponse> signUp({
     required String email,
     required String password,
@@ -46,18 +43,11 @@ class AuthRepository {
         ));
   }
 
-  /// Sign out current session.
-  ///
-  /// Uses [SignOutScope.local] by default — does NOT revoke the refresh
-  /// token on the server, so it can be used later to restore the session.
   Future<void> signOut({SignOutScope scope = SignOutScope.local}) async {
     _log.d('[FIX] signOut: scope=$scope');
     await supabaseGuard(() => _client.auth.signOut(scope: scope));
   }
 
-  /// Restore a session using a stored refresh token.
-  ///
-  /// Returns the new [AuthResponse] if successful, or throws on failure.
   Future<AuthResponse> restoreSession(String refreshToken) async {
     _log.d('[FIX] restoreSession: attempting session recovery');
     return supabaseGuard(
@@ -65,10 +55,6 @@ class AuthRepository {
     );
   }
 
-  /// [FIX] Refresh the current session using the existing refresh token.
-  ///
-  /// Useful as a fallback when [restoreSession] fails because the token
-  /// was rotated but a valid session still exists.
   Future<AuthResponse> refreshCurrentSession() async {
     _log.d('[FIX] refreshCurrentSession: attempting token refresh');
     return supabaseGuard(
@@ -76,9 +62,6 @@ class AuthRepository {
     );
   }
 
-  /// Send password reset email.
-  ///
-  /// Supabase will send 6-digit OTP code (if template uses {{ .Token }}).
   Future<void> resetPassword(String email) async {
     _log.d('[FIX] resetPassword: $email');
     await supabaseGuard(
@@ -87,7 +70,6 @@ class AuthRepository {
     _log.i('[FIX] Password reset email sent successfully');
   }
 
-  /// Update password for the currently authenticated user.
   Future<void> updatePassword(String newPassword) async {
     _log.d('[FIX] updatePassword called');
     await supabaseGuard(
@@ -98,7 +80,6 @@ class AuthRepository {
     _log.i('[FIX] Password updated successfully');
   }
 
-  /// Verify recovery OTP code (from password reset email).
   Future<AuthResponse> verifyRecoveryOtp({
     required String email,
     required String token,
@@ -111,7 +92,6 @@ class AuthRepository {
         ));
   }
 
-  /// Resend email verification OTP code.
   Future<void> resendVerificationEmail(String email) async {
     _log.d('resendVerificationEmail: $email');
     await supabaseGuard(() => _client.auth.resend(
@@ -120,7 +100,6 @@ class AuthRepository {
         ));
   }
 
-  /// Verify email with 6-digit OTP code.
   Future<AuthResponse> verifyEmailOtp({
     required String email,
     required String token,
@@ -133,12 +112,7 @@ class AuthRepository {
         ));
   }
 
-  // ──────────────────────────── OAuth ────────────────────────────────
 
-  /// Sign in with Google using the native SDK.
-  ///
-  /// Requires `GOOGLE_WEB_CLIENT_ID` (and optionally `GOOGLE_IOS_CLIENT_ID`)
-  /// in env.json, and the Google provider enabled in Supabase Dashboard.
   Future<AuthResponse> signInWithGoogle() async {
     _log.d('signInWithGoogle');
 
@@ -179,14 +153,9 @@ class AuthRepository {
     );
   }
 
-  /// Sign in with Apple using the native SDK.
-  ///
-  /// Requires the Apple provider enabled in Supabase Dashboard and
-  /// Sign in with Apple capability in the iOS entitlements.
   Future<AuthResponse> signInWithApple() async {
     _log.d('signInWithApple');
 
-    // Generate a secure random nonce
     final rawNonce = _generateNonce();
     final hashedNonce = sha256.convert(utf8.encode(rawNonce)).toString();
 
@@ -213,7 +182,6 @@ class AuthRepository {
     );
   }
 
-  /// Generate a cryptographically secure random nonce.
   String _generateNonce([int length = 32]) {
     const charset =
         '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
@@ -222,12 +190,9 @@ class AuthRepository {
         .join();
   }
 
-  /// Get current session (null if not authenticated).
   Session? get currentSession => _client.auth.currentSession;
 
-  /// Get current user (null if not authenticated).
   User? get currentUser => _client.auth.currentUser;
 
-  /// Auth state change stream.
   Stream<AuthState> get onAuthStateChange => _client.auth.onAuthStateChange;
 }

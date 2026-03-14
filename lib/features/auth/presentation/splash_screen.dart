@@ -58,7 +58,6 @@ SplashAuthDecision decideSplashAuthDecision({
   return SplashAuthDecision.goToLogin;
 }
 
-/// Splash screen — checks auth session, auto-redirects.
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
@@ -74,7 +73,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _checkAuth() async {
-    // Small delay for splash feel
     await Future.delayed(ref.read(splashInitialDelayProvider));
     if (!mounted) return;
 
@@ -105,13 +103,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       return;
     }
 
-    // Check if user has an org selected
     final hasOrg = ref.read(currentOrgIdProvider) != null;
 
     if (hasOrg) {
       context.go('/orders');
     } else {
-      // Try to auto-select if user has exactly one org
       final orgs = await ref.read(userOrganizationsProvider.future);
 
       if (!mounted) return;
@@ -151,7 +147,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Glass logo
             Container(
               width: 80,
               height: 80,

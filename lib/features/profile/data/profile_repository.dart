@@ -8,16 +8,12 @@ import 'package:deskflow/features/profile/domain/notification_settings.dart';
 
 final _log = AppLogger.getLogger('ProfileRepository');
 
-/// Handles profile-related database operations.
 class ProfileRepository {
   final SupabaseClient _client;
 
   ProfileRepository(this._client);
 
-  // ──────────────────── Notification Settings ────────────────────
 
-  /// Fetch notification settings for user+org.
-  /// Returns null if no row exists yet (user hasn't customized).
   Future<NotificationSettings?> getNotificationSettings({
     required String userId,
     required String orgId,
@@ -41,7 +37,6 @@ class ProfileRepository {
     });
   }
 
-  /// Upsert notification settings (insert or update).
   Future<NotificationSettings> saveNotificationSettings(
     NotificationSettings settings,
   ) async {
@@ -68,9 +63,7 @@ class ProfileRepository {
     });
   }
 
-  // ──────────────────── Profile Info ─────────────────────────────
 
-  /// Get profile data for the current user.
   Future<Map<String, dynamic>?> getProfile(String userId) async {
     _log.d('getProfile: userId=$userId');
     return supabaseGuard(() async {
@@ -85,7 +78,6 @@ class ProfileRepository {
     });
   }
 
-  /// Update profile fields for the current user.
   Future<void> updateProfile({
     required String userId,
     String? fullName,
@@ -107,15 +99,7 @@ class ProfileRepository {
     });
   }
 
-  // ──────────────────── Avatar Upload ────────────────────────────
 
-  /// Upload a user avatar to Supabase Storage 'avatars' bucket.
-  ///
-  /// Returns the public URL of the uploaded image.
-  /// Path format: `{userId}/avatar_{timestamp}.{ext}`
-  ///
-  /// Uses upsert to replace existing avatar at the same path slot.
-  /// Follows the same pattern as `OrgRepository.uploadOrgAvatar`.
   Future<String> uploadAvatar({
     required String userId,
     required Uint8List bytes,
@@ -124,13 +108,10 @@ class ProfileRepository {
     _log.d('uploadAvatar: userId=$userId, fileExt=$fileExt, bytes=${bytes.length}');
     return supabaseGuard(() async {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      // [FIX] Normalize extension: both 'jpg' and 'jpeg' use file ext 'jpg'
       final normalizedExt = fileExt == 'jpeg' ? 'jpg' : fileExt;
       final path = '$userId/avatar_$timestamp.$normalizedExt';
       _log.d('[FIX] uploadAvatar: uploading to path=$path');
 
-      // [FIX] Map file extension to correct MIME type
-      // 'jpg' must map to 'image/jpeg' (not 'image/jpg' which is invalid)
       final mimeMap = {
         'jpg': 'image/jpeg',
         'jpeg': 'image/jpeg',

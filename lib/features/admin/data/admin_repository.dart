@@ -3,22 +3,18 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:deskflow/core/errors/deskflow_exception.dart';
 import 'package:deskflow/core/errors/supabase_error_handler.dart';
 import 'package:deskflow/core/utils/app_logger.dart';
+import 'package:deskflow/features/admin/domain/org_invite.dart';
 import 'package:deskflow/features/org/domain/org_member.dart';
 import 'package:deskflow/features/orders/domain/order_status.dart';
 
 final _log = AppLogger.getLogger('AdminRepository');
 
-/// Handles admin-panel database operations:
-/// - Organization member management (invite, role change, remove)
-/// - Pipeline (order statuses) CRUD
 class AdminRepository {
   final SupabaseClient _client;
 
   AdminRepository(this._client);
 
-  // ──────────────────────── Members ─────────────────────────────────
 
-  /// Get all members with their profile info (full_name, email).
   Future<List<MemberWithProfile>> getMembers(String orgId) async {
     _log.d('getMembers: orgId=$orgId');
     return supabaseGuard(() async {
@@ -35,7 +31,6 @@ class AdminRepository {
     });
   }
 
-  /// Change a member's role.
   Future<void> changeRole({
     required String memberId,
     required OrgRole newRole,
@@ -49,7 +44,6 @@ class AdminRepository {
     });
   }
 
-  /// Remove a member from the organization.
   Future<void> removeMember(String memberId) async {
     _log.d('removeMember: memberId=$memberId');
     return supabaseGuard(() async {
@@ -60,52 +54,85 @@ class AdminRepository {
     });
   }
 
-  /// Invite a new member by email.
-  ///
-  /// Uses a SECURITY DEFINER RPC function to bypass RLS on profiles table,
-  /// since admin cannot SELECT other users' profiles (RLS: auth.uid() = id).
+  Future<OrgInvite> inviteMemberByEmail({
+    required String orgId,
+    required String email,
+    required OrgRole role,
+  }) async {
+    _log.d('inviteMemberByEmail: orgId=$orgId, email=$email, role=$role');
+    return supabaseGuard(() async {
+      try {
+        final response = await _client.rpc(
+          'invite_member_by_email_v2',
+          params: {
+            'p_org_id': orgId,
+            'p_email': email.trim(),
+            'p_role': role.toJson(),
+          },
+        );
+
+        return OrgInvite.fromJson(response as Map<String, dynamic>);
+      } on PostgrestException catch (e) {
+        throw _mapInviteError(e, email: email);
+      }
+    });
+  }
+
   Future<void> inviteMember({
     required String orgId,
     required String email,
     required OrgRole role,
   }) async {
-    _log.d('inviteMember: orgId=$orgId, email=$email, role=$role');
-    return supabaseGuard(() async {
-      try {
-        await _client.rpc(
-          'invite_member_by_email',
-          params: {
-            'p_org_id': orgId,
-            'p_email': email,
-            'p_role': role.toJson(),
-          },
-        );
-      } on PostgrestException catch (e) {
-        // [FIX] Map RPC exceptions to DeskflowException (not plain Exception)
-        // so supabaseGuard passes them through instead of wrapping as UNKNOWN_ERROR
-        final msg = e.message;
-        _log.w('[FIX] inviteMember RPC error: $msg');
-        if (msg.contains('USER_NOT_FOUND')) {
-          throw DeskflowException(
-              'Пользователь с email $email не найден. '
-              'Он должен сперва зарегистрироваться.',
-              code: 'USER_NOT_FOUND');
-        } else if (msg.contains('ALREADY_MEMBER')) {
-          throw const DeskflowException(
-              'Этот пользователь уже является участником',
-              code: 'ALREADY_MEMBER');
-        } else if (msg.contains('NOT_OWNER')) {
-          throw const DeskflowException(
-              'Только владелец может приглашать участников',
-              code: 'NOT_OWNER');
-        } else {
-          rethrow;
-        }
-      }
-    });
+    await inviteMemberByEmail(orgId: orgId, email: email, role: role);
   }
 
-  /// Count owners in an organization.
+  DeskflowException _mapInviteError(
+    PostgrestException error, {
+    required String email,
+  }) {
+    final msg = error.message;
+    _log.w('invite RPC error: $msg');
+
+    if (msg.contains('ALREADY_MEMBER')) {
+      return const DeskflowException(
+        'Этот пользователь уже является участником',
+        code: 'ALREADY_MEMBER',
+      );
+    }
+    if (msg.contains('NOT_ALLOWED_ROLE')) {
+      return const DeskflowException(
+        'Администратор не может приглашать владельца',
+        code: 'NOT_ALLOWED_ROLE',
+      );
+    }
+    if (msg.contains('NOT_ALLOWED')) {
+      return const DeskflowException(
+        'Только владелец или администратор может приглашать участников',
+        code: 'NOT_ALLOWED',
+      );
+    }
+    if (msg.contains('INVALID_ROLE')) {
+      return const DeskflowException(
+        'Выбрана некорректная роль',
+        code: 'INVALID_ROLE',
+      );
+    }
+    if (msg.contains('INVALID_EMAIL')) {
+      return DeskflowException(
+        'Некорректный email: $email',
+        code: 'INVALID_EMAIL',
+      );
+    }
+    if (msg.contains('gen_random_bytes')) {
+      return const DeskflowException(
+        'Сервис приглашений временно недоступен. Обновите миграции базы данных.',
+        code: 'INVITE_RPC_MISCONFIGURED',
+      );
+    }
+
+    return DeskflowException(msg, code: error.code);
+  }
+
   Future<int> countOwners(String orgId) async {
     return supabaseGuard(() async {
       final response = await _client
@@ -118,9 +145,7 @@ class AdminRepository {
     });
   }
 
-  // ──────────────────────── Pipeline ────────────────────────────────
 
-  /// Create a new order status.
   Future<OrderStatus> createStatus({
     required String orgId,
     required String name,
@@ -131,7 +156,6 @@ class AdminRepository {
   }) async {
     _log.d('createStatus: orgId=$orgId, name=$name');
     return supabaseGuard(() async {
-      // If setting as default, unset any existing default
       if (isDefault) {
         await _client
             .from('order_statuses')
@@ -157,7 +181,6 @@ class AdminRepository {
     });
   }
 
-  /// Update an existing order status.
   Future<OrderStatus> updateStatus({
     required String statusId,
     required String orgId,
@@ -192,7 +215,6 @@ class AdminRepository {
     });
   }
 
-  /// Delete an order status.
   Future<void> deleteStatus(String statusId) async {
     _log.d('deleteStatus: statusId=$statusId');
     return supabaseGuard(() async {
@@ -200,7 +222,6 @@ class AdminRepository {
     });
   }
 
-  /// Reorder statuses by updating sort_order.
   Future<void> reorderStatuses(List<String> statusIds) async {
     _log.d('reorderStatuses: count=${statusIds.length}');
     return supabaseGuard(() async {
@@ -213,7 +234,6 @@ class AdminRepository {
     });
   }
 
-  /// Count orders using a specific status.
   Future<int> countOrdersWithStatus(String statusId) async {
     return supabaseGuard(() async {
       final response = await _client
@@ -225,9 +245,7 @@ class AdminRepository {
     });
   }
 
-  // ──────────────────────── Organization ────────────────────────────
 
-  /// Update organization name.
   Future<void> updateOrganization({
     required String orgId,
     required String name,
@@ -241,7 +259,6 @@ class AdminRepository {
     });
   }
 
-  /// Delete organization.
   Future<void> deleteOrganization(String orgId) async {
     _log.d('deleteOrganization: orgId=$orgId');
     return supabaseGuard(() async {
@@ -250,7 +267,6 @@ class AdminRepository {
   }
 }
 
-/// OrgMember enriched with profile info.
 class MemberWithProfile {
   final String id;
   final String organizationId;
@@ -270,7 +286,6 @@ class MemberWithProfile {
     this.email,
   });
 
-  /// Initials from full name.
   String get initials {
     if (fullName == null || fullName!.isEmpty) return '?';
     final parts = fullName!.split(' ');

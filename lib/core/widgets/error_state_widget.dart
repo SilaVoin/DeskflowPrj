@@ -2,14 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:deskflow/core/theme/deskflow_theme.dart';
 
-/// Full-screen error state with retry.
-///
-/// ```dart
-/// ErrorStateWidget(
-///   message: 'Ошибка загрузки данных',
-///   onRetry: () => ref.invalidate(ordersProvider),
-/// )
-/// ```
 class ErrorStateWidget extends StatelessWidget {
   const ErrorStateWidget({
     super.key,

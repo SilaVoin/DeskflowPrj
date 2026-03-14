@@ -1,4 +1,3 @@
-/// Notification settings model — persisted in `user_preferences` table.
 class NotificationSettings {
   final String? id;
   final String userId;
@@ -18,6 +17,16 @@ class NotificationSettings {
     this.notifySound = true,
   });
 
+  factory NotificationSettings.defaults({
+    required String userId,
+    required String organizationId,
+  }) {
+    return NotificationSettings(
+      userId: userId,
+      organizationId: organizationId,
+    );
+  }
+
   factory NotificationSettings.fromJson(Map<String, dynamic> json) {
     return NotificationSettings(
       id: json['id'] as String?,
@@ -32,7 +41,6 @@ class NotificationSettings {
 
   Map<String, dynamic> toJson() {
     return {
-      if (id != null) 'id': id,
       'user_id': userId,
       'organization_id': organizationId,
       'notify_new_orders': notifyNewOrders,
@@ -43,33 +51,19 @@ class NotificationSettings {
   }
 
   NotificationSettings copyWith({
-    String? id,
-    String? userId,
-    String? organizationId,
     bool? notifyNewOrders,
     bool? notifyStatusChanges,
     bool? notifyChatMessages,
     bool? notifySound,
   }) {
     return NotificationSettings(
-      id: id ?? this.id,
-      userId: userId ?? this.userId,
-      organizationId: organizationId ?? this.organizationId,
+      id: id,
+      userId: userId,
+      organizationId: organizationId,
       notifyNewOrders: notifyNewOrders ?? this.notifyNewOrders,
       notifyStatusChanges: notifyStatusChanges ?? this.notifyStatusChanges,
       notifyChatMessages: notifyChatMessages ?? this.notifyChatMessages,
       notifySound: notifySound ?? this.notifySound,
-    );
-  }
-
-  /// Default settings for a new user+org pair.
-  factory NotificationSettings.defaults({
-    required String userId,
-    required String organizationId,
-  }) {
-    return NotificationSettings(
-      userId: userId,
-      organizationId: organizationId,
     );
   }
 }

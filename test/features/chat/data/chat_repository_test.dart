@@ -13,7 +13,6 @@ void main() {
     repo = ChatRepository(mockClient);
   });
 
-  // ──────────────────── Sample JSON fixtures ─────────────────────────
 
   Map<String, dynamic> messageJson({
     String id = 'msg-1',
@@ -34,7 +33,6 @@ void main() {
         'chat_attachments': <Map<String, dynamic>>[],
       };
 
-  // ─────────────────────── getMessages ───────────────────────────────
 
   group('getMessages', () {
     test('returns parsed messages', () async {
@@ -125,12 +123,9 @@ void main() {
     });
   });
 
-  // ─────────────────────── getLatestMessages ─────────────────────────
 
   group('getLatestMessages', () {
     test('returns last N messages in chronological order', () async {
-      // The repo fetches descending and reverses — the fake just resolves
-      // whatever data is pre‐configured.
       final fakeData = [
         messageJson(id: 'msg-3', text: 'Третье'),
         messageJson(id: 'msg-2', text: 'Второе'),
@@ -142,13 +137,11 @@ void main() {
 
       final result = await repo.getLatestMessages(orderId: 'ord-1', count: 3);
 
-      // The repo reverses the descending fetch for chronological order.
       expect(result.length, 3);
       expect(result.last.id, 'msg-3');
     });
   });
 
-  // ─────────────────────── sendMessage ───────────────────────────────
 
   group('sendMessage', () {
     test('returns the sent message', () async {

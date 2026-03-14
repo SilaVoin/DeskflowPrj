@@ -9,10 +9,6 @@ import 'package:deskflow/core/widgets/glass_text_field.dart';
 import 'package:deskflow/core/widgets/pill_button.dart';
 import 'package:deskflow/features/org/domain/org_notifier.dart';
 
-/// Join organization by invite code screen.
-///
-/// Accepts an optional [initialCode] from query parameter `?code=XXXXX`
-/// (e.g. from a shared invite link).
 class JoinOrgScreen extends ConsumerStatefulWidget {
   final String? initialCode;
 
@@ -30,7 +26,6 @@ class _JoinOrgScreenState extends ConsumerState<JoinOrgScreen> {
   void initState() {
     super.initState();
     _codeController = TextEditingController(text: widget.initialCode ?? '');
-    // [FIX] Auto-submit if code was passed via deep link
     if (widget.initialCode != null && widget.initialCode!.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _handleJoin());
     }

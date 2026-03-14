@@ -4,21 +4,22 @@ import 'package:deskflow/core/errors/supabase_error_handler.dart';
 import 'package:deskflow/core/utils/app_logger.dart';
 import 'package:deskflow/features/orders/domain/audit_event.dart';
 import 'package:deskflow/features/orders/domain/customer.dart';
+import 'package:deskflow/features/orders/domain/order_composition.dart';
 import 'package:deskflow/features/orders/domain/order.dart';
 import 'package:deskflow/features/orders/domain/order_item.dart';
 import 'package:deskflow/features/orders/domain/order_status.dart';
+import 'package:deskflow/features/orders/domain/order_template.dart';
+import 'package:deskflow/features/orders/domain/orders_list_controls.dart';
+import 'package:deskflow/features/products/domain/product.dart';
 
 final _log = AppLogger.getLogger('OrderRepository');
 
-/// Handles all order-related database operations.
 class OrderRepository {
   final SupabaseClient _client;
 
   OrderRepository(this._client);
 
-  // ──────────────────────────── Pipeline ─────────────────────────────
 
-  /// Fetch order status pipeline for an organization (sorted).
   Future<List<OrderStatus>> getPipeline(String orgId) async {
     _log.d('getPipeline: orgId=$orgId');
     return supabaseGuard(() async {
@@ -26,7 +27,6 @@ class OrderRepository {
           .from('order_statuses')
           .select()
           .eq('organization_id', orgId)
-          // [FIX] ascending: true required — postgrest-dart defaults to descending.
           .order('sort_order', ascending: true);
 
       return (data as List)
@@ -35,7 +35,6 @@ class OrderRepository {
     });
   }
 
-  /// Get default status for new orders.
   Future<OrderStatus> getDefaultStatus(String orgId) async {
     _log.d('getDefaultStatus: orgId=$orgId');
     return supabaseGuard(() async {
@@ -50,19 +49,26 @@ class OrderRepository {
     });
   }
 
-  // ──────────────────────────── Orders ───────────────────────────────
 
-  /// Fetch orders for org with joined status + customer name.
   Future<List<Order>> getOrders({
     required String orgId,
     String? statusId,
+    OrdersPeriodPreset periodPreset = OrdersPeriodPreset.all,
+    DateTime? selectedDate,
+    OrderDateRange? selectedDateRange,
+    OrderAmountRange? amountRange,
     int limit = 20,
     int offset = 0,
   }) async {
-    _log.d('getOrders: orgId=$orgId, statusId=$statusId, '
-        'limit=$limit, offset=$offset');
+    _log.d(
+      'getOrders: orgId=$orgId, statusId=$statusId, '
+      'periodPreset=$periodPreset, selectedDate=$selectedDate, '
+      'selectedDateRange=$selectedDateRange, '
+      'amountRange=$amountRange, '
+      'limit=$limit, offset=$offset',
+    );
     return supabaseGuard(() async {
-      var query = _client
+      dynamic query = _client
           .from('orders')
           .select('*, order_statuses(*), customers(name)')
           .eq('organization_id', orgId);
@@ -71,9 +77,27 @@ class OrderRepository {
         query = query.eq('status_id', statusId);
       }
 
-      final data = await query
-          .order('created_at', ascending: false)
-          .range(offset, offset + limit - 1);
+      final dateRange = _resolveDateRange(
+        selectedDate: selectedDate,
+        selectedDateRange: selectedDateRange,
+        periodPreset: periodPreset,
+      );
+
+      if (dateRange != null) {
+        query = query
+            .gte('created_at', dateRange.start.toUtc().toIso8601String())
+            .lt('created_at', dateRange.end.toUtc().toIso8601String());
+      }
+
+      if (amountRange != null) {
+        query = query
+            .gte('total_amount', amountRange.min)
+            .lte('total_amount', amountRange.max);
+      }
+
+      query = query.order('created_at', ascending: false);
+
+      final data = await query.range(offset, offset + limit - 1);
 
       return (data as List)
           .map((e) => Order.fromJson(e as Map<String, dynamic>))
@@ -81,25 +105,69 @@ class OrderRepository {
     });
   }
 
-  /// Search orders by number, customer name, or notes (server-side).
+  ({DateTime start, DateTime end})? _resolveDateRange({
+    required DateTime? selectedDate,
+    required OrderDateRange? selectedDateRange,
+    required OrdersPeriodPreset periodPreset,
+  }) {
+    if (selectedDateRange != null) {
+      final normalized = selectedDateRange.normalized();
+      return (
+        start: normalized.start,
+        end: normalized.end.add(const Duration(days: 1)),
+      );
+    }
+
+    if (selectedDate != null) {
+      final dayStart = DateTime(
+        selectedDate.year,
+        selectedDate.month,
+        selectedDate.day,
+      );
+      return (
+        start: dayStart,
+        end: dayStart.add(const Duration(days: 1)),
+      );
+    }
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    switch (periodPreset) {
+      case OrdersPeriodPreset.all:
+        return null;
+      case OrdersPeriodPreset.today:
+        return (start: today, end: today.add(const Duration(days: 1)));
+      case OrdersPeriodPreset.last7Days:
+        return (
+          start: today.subtract(const Duration(days: 6)),
+          end: today.add(const Duration(days: 1)),
+        );
+      case OrdersPeriodPreset.last30Days:
+        return (
+          start: today.subtract(const Duration(days: 29)),
+          end: today.add(const Duration(days: 1)),
+        );
+    }
+  }
+
   Future<List<Order>> searchOrders({
     required String orgId,
     required String query,
     String? statusId,
   }) async {
-    _log.d('[FIX] searchOrders: orgId=$orgId, query="$query", statusId=$statusId');
+    _log.d(
+      '[FIX] searchOrders: orgId=$orgId, query="$query", statusId=$statusId',
+    );
     return supabaseGuard(() async {
-      // Normalize query: trim whitespace
       final normalizedQuery = query.trim();
       if (normalizedQuery.isEmpty) return [];
 
-      // Try to parse as order number — strip "#" prefix and leading zeros
       final numberStr = normalizedQuery
           .replaceAll('#', '')
           .replaceAll(RegExp(r'^0+'), '');
       final orderNumber = int.tryParse(numberStr);
 
-      // Step 1: Find customer IDs matching the query
       final customerData = await _client
           .from('customers')
           .select('id')
@@ -109,10 +177,11 @@ class OrderRepository {
           .map((e) => e['id'] as String)
           .toList();
 
-      _log.d('[FIX] searchOrders: orderNumber=$orderNumber, '
-          'matchingCustomers=${customerIds.length}');
+      _log.d(
+        '[FIX] searchOrders: orderNumber=$orderNumber, '
+        'matchingCustomers=${customerIds.length}',
+      );
 
-      // Step 2: Build OR filter parts
       final orParts = <String>['notes.ilike.%$normalizedQuery%'];
 
       if (orderNumber != null) {
@@ -125,7 +194,6 @@ class OrderRepository {
 
       final orFilter = orParts.join(',');
 
-      // Step 3: Query orders with combined filter
       var queryBuilder = _client
           .from('orders')
           .select('*, order_statuses(*), customers(name)')
@@ -149,14 +217,14 @@ class OrderRepository {
     });
   }
 
-  /// Fetch single order with full details.
   Future<Order> getOrder(String orderId) async {
     _log.d('getOrder: orderId=$orderId');
     return supabaseGuard(() async {
       final data = await _client
           .from('orders')
           .select(
-              '*, order_statuses(*), customers(name, phone, email), order_items(*)')
+            '*, order_statuses(*), customers(name, phone, email), order_items(*)',
+          )
           .eq('id', orderId)
           .single();
 
@@ -164,7 +232,6 @@ class OrderRepository {
     });
   }
 
-  /// Create a new order.
   Future<Order> createOrder({
     required String orgId,
     required String userId,
@@ -176,15 +243,15 @@ class OrderRepository {
   }) async {
     _log.d('createOrder: orgId=$orgId');
     return supabaseGuard(() async {
-      // 1. Calculate total from items (items-only subtotal, delivery stored separately)
       double total = 0;
       for (final item in items) {
         total +=
             (item['unit_price'] as num).toDouble() * (item['quantity'] as int);
       }
-      _log.d('[FIX] createOrder: items total=$total, deliveryCost=$deliveryCost (stored separately)');
+      _log.d(
+        '[FIX] createOrder: items total=$total, deliveryCost=$deliveryCost (stored separately)',
+      );
 
-      // 2. Insert order
       final orderData = await _client
           .from('orders')
           .insert({
@@ -201,21 +268,21 @@ class OrderRepository {
 
       final order = Order.fromJson(orderData);
 
-      // 3. Insert items
       if (items.isNotEmpty) {
         final itemRows = items
-            .map((item) => {
-                  'order_id': order.id,
-                  'product_id': item['product_id'],
-                  'product_name': item['product_name'],
-                  'unit_price': item['unit_price'],
-                  'quantity': item['quantity'],
-                })
+            .map(
+              (item) => {
+                'order_id': order.id,
+                'product_id': item['product_id'],
+                'product_name': item['product_name'],
+                'unit_price': item['unit_price'],
+                'quantity': item['quantity'],
+              },
+            )
             .toList();
         await _client.from('order_items').insert(itemRows);
       }
 
-      // 4. Audit event
       await _insertAudit(
         orgId: orgId,
         entityType: 'order',
@@ -229,7 +296,6 @@ class OrderRepository {
     });
   }
 
-  /// Update order status.
   Future<Order> updateStatus({
     required String orderId,
     required String statusId,
@@ -253,17 +319,14 @@ class OrderRepository {
         entityId: orderId,
         action: 'status_changed',
         userId: userId,
-        oldValue:
-            oldStatusName != null ? {'status': oldStatusName} : null,
-        newValue:
-            newStatusName != null ? {'status': newStatusName} : null,
+        oldValue: oldStatusName != null ? {'status': oldStatusName} : null,
+        newValue: newStatusName != null ? {'status': newStatusName} : null,
       );
 
       return Order.fromJson(data);
     });
   }
 
-  /// Update order details (notes, delivery cost, customer).
   Future<Order> updateOrder({
     required String orderId,
     required String userId,
@@ -298,9 +361,128 @@ class OrderRepository {
     });
   }
 
-  // ──────────────────────────── Order Items ──────────────────────────
 
-  /// Add item to order.
+  Future<List<OrderTemplate>> getOrderTemplates({required String orgId}) async {
+    _log.d('getOrderTemplates: orgId=$orgId');
+    return supabaseGuard(() async {
+      final data = await _client
+          .from('order_templates')
+          .select()
+          .eq('organization_id', orgId)
+          .order('updated_at', ascending: false);
+
+      return (data as List)
+          .map((row) => OrderTemplate.fromJson(row as Map<String, dynamic>))
+          .toList();
+    });
+  }
+
+  Future<OrderTemplate> saveOrderTemplate({
+    required String orgId,
+    required String name,
+    required OrderComposition composition,
+    String? templateId,
+  }) async {
+    _log.d(
+      'saveOrderTemplate: orgId=$orgId, templateId=$templateId, name=$name',
+    );
+    return supabaseGuard(() async {
+      final data = await _client
+          .from('order_templates')
+          .upsert({
+            if (templateId != null) 'id': templateId,
+            'organization_id': orgId,
+            'name': name,
+            'items': composition.items.map((item) => item.toJson()).toList(),
+          }, onConflict: 'id')
+          .select()
+          .single();
+
+      return OrderTemplate.fromJson(data);
+    });
+  }
+
+  Future<void> deleteOrderTemplate(String templateId) async {
+    _log.d('deleteOrderTemplate: templateId=$templateId');
+    return supabaseGuard(() async {
+      await _client.from('order_templates').delete().eq('id', templateId);
+    });
+  }
+
+  Future<OrderComposition> getDuplicateOrderComposition(String orderId) async {
+    _log.d('getDuplicateOrderComposition: orderId=$orderId');
+    final order = await getOrder(orderId);
+    return OrderComposition.fromOrderItems(order.items);
+  }
+
+  Future<List<Customer>> getRecentCustomers({
+    required String orgId,
+    int limit = 6,
+  }) async {
+    _log.d('getRecentCustomers: orgId=$orgId, limit=$limit');
+    return supabaseGuard(() async {
+      final data = await _client
+          .from('orders')
+          .select('customer_id, customers(*)')
+          .eq('organization_id', orgId)
+          .not('customer_id', 'is', null)
+          .order('created_at', ascending: false)
+          .limit(limit * 3);
+
+      final uniqueCustomers = <String, Customer>{};
+      for (final row in data as List) {
+        final json = row as Map<String, dynamic>;
+        final customerId = json['customer_id'] as String?;
+        final customerJson = json['customers'] as Map<String, dynamic>?;
+        if (customerId == null || customerJson == null) continue;
+        uniqueCustomers.putIfAbsent(
+          customerId,
+          () => Customer.fromJson(customerJson),
+        );
+        if (uniqueCustomers.length >= limit) break;
+      }
+
+      return uniqueCustomers.values.toList();
+    });
+  }
+
+  Future<List<Product>> getRecentProducts({
+    required String orgId,
+    int limit = 6,
+  }) async {
+    _log.d('getRecentProducts: orgId=$orgId, limit=$limit');
+    return supabaseGuard(() async {
+      final data = await _client
+          .from('orders')
+          .select('order_items(product_id, products(*))')
+          .eq('organization_id', orgId)
+          .order('created_at', ascending: false)
+          .limit(limit * 3);
+
+      final uniqueProducts = <String, Product>{};
+      for (final row in data as List) {
+        final items = (row as Map<String, dynamic>)['order_items'] as List?;
+        if (items == null) continue;
+        for (final item in items) {
+          final itemJson = item as Map<String, dynamic>;
+          final productId = itemJson['product_id'] as String?;
+          final productJson = itemJson['products'] as Map<String, dynamic>?;
+          if (productId == null || productJson == null) continue;
+          uniqueProducts.putIfAbsent(
+            productId,
+            () => Product.fromJson(productJson),
+          );
+          if (uniqueProducts.length >= limit) {
+            return uniqueProducts.values.toList();
+          }
+        }
+      }
+
+      return uniqueProducts.values.toList();
+    });
+  }
+
+
   Future<OrderItem> addItem({
     required String orderId,
     required String productId,
@@ -322,14 +504,12 @@ class OrderRepository {
           .select()
           .single();
 
-      // Recalculate total
       await _recalculateTotal(orderId);
 
       return OrderItem.fromJson(data);
     });
   }
 
-  /// Remove item from order.
   Future<void> removeItem(String itemId, String orderId) async {
     _log.d('removeItem: itemId=$itemId');
     return supabaseGuard(() async {
@@ -338,7 +518,6 @@ class OrderRepository {
     });
   }
 
-  /// Recalculate order total from items + delivery.
   Future<void> _recalculateTotal(String orderId) async {
     final items = await _client
         .from('order_items')
@@ -347,12 +526,13 @@ class OrderRepository {
 
     double total = 0;
     for (final item in items as List) {
-      total += (item['unit_price'] as num).toDouble() *
-          (item['quantity'] as int);
+      total +=
+          (item['unit_price'] as num).toDouble() * (item['quantity'] as int);
     }
 
-    // [FIX] total_amount stores items-only subtotal; delivery_cost is separate
-    _log.d('[FIX] _recalculateTotal: items total=$total (delivery not included)');
+    _log.d(
+      '[FIX] _recalculateTotal: items total=$total (delivery not included)',
+    );
 
     await _client
         .from('orders')
@@ -360,9 +540,7 @@ class OrderRepository {
         .eq('id', orderId);
   }
 
-  // ──────────────────────────── Customers ────────────────────────────
 
-  /// Search customers by name.
   Future<List<Customer>> searchCustomers({
     required String orgId,
     required String query,
@@ -383,7 +561,6 @@ class OrderRepository {
     });
   }
 
-  /// Create a new customer.
   Future<Customer> createCustomer({
     required String orgId,
     required String name,
@@ -409,9 +586,7 @@ class OrderRepository {
     });
   }
 
-  // ──────────────────────────── Audit ────────────────────────────────
 
-  /// Get audit events for an order.
   Future<List<AuditEvent>> getOrderAuditLog(String orderId) async {
     _log.d('getOrderAuditLog: orderId=$orderId');
     return supabaseGuard(() async {
@@ -428,7 +603,6 @@ class OrderRepository {
     });
   }
 
-  /// Insert audit event.
   Future<void> _insertAudit({
     required String orgId,
     required String entityType,

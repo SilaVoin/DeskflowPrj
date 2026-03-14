@@ -1,69 +1,55 @@
 import 'package:flutter/material.dart';
 
-/// Deskflow Liquid Glass color palette.
-///
-/// All colors are designed for AMOLED dark backgrounds (#000000)
-/// with translucent glass overlays.
+import 'package:deskflow/core/theme/deskflow_motion.dart';
+
 class DeskflowColors {
   DeskflowColors._();
 
-  // ─── Backgrounds ──────────────────────────────────────────
-  /// Pure black AMOLED background.
   static const Color background = Color(0xFF000000);
+  static const Color backgroundBase = Color(0xFF050608);
+  static const Color backgroundRaised = Color(0xFF0B0E12);
+  static const Color auroraPurple = Color(0xFF7D39FF);
+  static const Color auroraViolet = Color(0xFFC487FF);
+  static const Color auroraBlue = Color(0xFF66B8FF);
+  static const Color auroraHalo = Color(0xFFF5EEFF);
 
-  // ─── Glass surfaces ───────────────────────────────────────
-  /// Default glass surface fill.
-  static const Color glassSurface = Color(0x14FFFFFF); // rgba(255,255,255,0.08)
+  static const Color glassSurface = Color(0x96141820);
 
-  /// Glass surface — elevated (modals, sheets).
-  static const Color glassSurfaceElevated = Color(0x1FFFFFFF); // ~0.12
+  static const Color glassSurfaceElevated = Color(0xB61A1F28);
+  static const Color shellGlassSurface = Color(0xA8181C24);
+  static const Color shellGlassSurfaceFocused = Color(0xC21A1F28);
 
-  /// Glass border color.
-  static const Color glassBorder = Color(0x26FFFFFF); // rgba(255,255,255,0.15)
+  static const Color glassBorder = Color(0x2EE2E8EF);
+  static const Color glassBorderStrong = Color(0x52F5F8FC);
 
-  /// Glass specular highlight (top edge).
-  static const Color glassHighlight = Color(0x33FFFFFF); // ~0.20
+  static const Color glassHighlight = Color(0x52FFFFFF);
+  static const Color glassGlow = Color(0x1FD8E2EC);
 
-  /// Modal / bottom sheet surface — nearly opaque dark to prevent text bleed-through.
-  ///
-  /// Uses Apple UIKit dark-mode sheet color (#1C1C1E) at 96% opacity.
-  static const Color modalSurface = Color(0xF51C1C1E);
+  static const Color modalSurface = Color(0xCC13161B);
+  static const Color modalBackdrop = Color(0x7A020304);
 
-  // ─── Actions ──────────────────────────────────────────────
-  /// Primary action blue glass.
-  static const Color primary = Color(0x99007AFF); // rgba(0,122,255,0.6)
-  static const Color primarySolid = Color(0xFF007AFF);
+  static const Color primary = Color(0x66DCE5F0);
+  static const Color primarySolid = Color(0xFFE4EDF7);
+  static const Color primaryGlow = Color(0x66C8D3DE);
 
-  /// Destructive red glass.
-  static const Color destructive = Color(0x99FF3B30); // rgba(255,59,48,0.6)
+  static const Color destructive = Color(0x99FF5D52);
   static const Color destructiveSolid = Color(0xFFFF3B30);
 
-  /// Success green glass.
-  static const Color success = Color(0x9934C759); // rgba(52,199,89,0.6)
-  static const Color successSolid = Color(0xFF34C759);
+  static const Color success = Color(0x9952D18A);
+  static const Color successSolid = Color(0xFF52D18A);
 
-  /// Warning yellow glass.
-  static const Color warning = Color(0x99FFCC00); // rgba(255,204,0,0.6)
-  static const Color warningSolid = Color(0xFFFFCC00);
+  static const Color warning = Color(0x99F1C77A);
+  static const Color warningSolid = Color(0xFFF1C77A);
 
-  // ─── Text ─────────────────────────────────────────────────
-  /// Primary text — white.
-  static const Color textPrimary = Color(0xFFFFFFFF);
+  static const Color textPrimary = Color(0xFFF6F8FB);
 
-  /// Secondary text — light gray.
-  static const Color textSecondary = Color(0x99FFFFFF); // rgba(255,255,255,0.6)
+  static const Color textSecondary = Color(0xBFE0E5EB);
 
-  /// Tertiary text — dim gray.
-  static const Color textTertiary = Color(0x59FFFFFF); // rgba(255,255,255,0.35)
+  static const Color textTertiary = Color(0x8C9CA8B3);
 
-  /// Disabled text.
-  static const Color textDisabled = Color(0x33FFFFFF); // ~0.20
+  static const Color textDisabled = Color(0x4C99A4AE);
 }
 
-/// Deskflow Liquid Glass text styles.
-///
-/// Uses system font (SF Pro on iOS, Roboto on Android)
-/// as specified in the design spec.
 class DeskflowTypography {
   DeskflowTypography._();
 
@@ -118,7 +104,6 @@ class DeskflowTypography {
   );
 }
 
-/// Deskflow spacing constants.
 class DeskflowSpacing {
   DeskflowSpacing._();
 
@@ -131,9 +116,6 @@ class DeskflowSpacing {
   static const double xxxl = 48;
 }
 
-/// Deskflow border radius constants.
-///
-/// Uses continuous curvature (squircle-like) via [borderRadius].
 class DeskflowRadius {
   DeskflowRadius._();
 
@@ -142,20 +124,26 @@ class DeskflowRadius {
   static const double lg = 16;
   static const double xl = 20;
   static const double pill = 100; // Capsule / stadium shape
+  static const double card = 20;
+  static const double field = 18;
+  static const double overlay = 28;
+  static const double nav = 26;
 }
 
-/// Builds the Deskflow Liquid Glass [ThemeData].
-ThemeData buildDeskflowTheme() {
+ThemeData buildDeskflowTheme({bool animationsEnabled = true}) {
   return ThemeData(
     brightness: Brightness.dark,
-    scaffoldBackgroundColor: DeskflowColors.background,
+    scaffoldBackgroundColor: DeskflowColors.backgroundBase,
     colorScheme: const ColorScheme.dark(
       primary: DeskflowColors.primarySolid,
       onPrimary: DeskflowColors.textPrimary,
       secondary: DeskflowColors.primary,
-      surface: DeskflowColors.background,
+      surface: DeskflowColors.backgroundRaised,
       error: DeskflowColors.destructiveSolid,
     ),
+    extensions: <ThemeExtension<dynamic>>[
+      DeskflowMotionTheme(animationsEnabled: animationsEnabled),
+    ],
     appBarTheme: const AppBarTheme(
       backgroundColor: Colors.transparent,
       elevation: 0,
@@ -179,19 +167,18 @@ ThemeData buildDeskflowTheme() {
       thickness: 0.5,
     ),
     bottomSheetTheme: BottomSheetThemeData(
-      // [FIX] Use modalSurface (opaque dark) to prevent background bleed-through.
-      backgroundColor: DeskflowColors.modalSurface,
+      backgroundColor: Colors.transparent,
+      modalBackgroundColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(DeskflowRadius.xl),
+          top: Radius.circular(DeskflowRadius.overlay),
         ),
       ),
     ),
     dialogTheme: DialogThemeData(
-      // [FIX] Use modalSurface for dialogs too.
       backgroundColor: DeskflowColors.modalSurface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(DeskflowRadius.lg),
+        borderRadius: BorderRadius.circular(DeskflowRadius.overlay),
       ),
     ),
     snackBarTheme: SnackBarThemeData(
@@ -201,6 +188,16 @@ ThemeData buildDeskflowTheme() {
         borderRadius: BorderRadius.circular(DeskflowRadius.md),
       ),
       behavior: SnackBarBehavior.floating,
+    ),
+    floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      backgroundColor: DeskflowColors.glassSurfaceElevated,
+      foregroundColor: DeskflowColors.textPrimary,
+      elevation: 0,
+      focusElevation: 0,
+      hoverElevation: 0,
+      highlightElevation: 0,
+      disabledElevation: 0,
+      shape: CircleBorder(),
     ),
   );
 }

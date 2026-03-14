@@ -13,12 +13,6 @@ import 'package:deskflow/features/notifications/domain/notification_providers.da
 
 final _log = AppLogger.getLogger('NotificationsScreen');
 
-/// In-app notifications list screen.
-///
-/// Shows all notifications for the current user/org with:
-/// - Tap to navigate to the related order
-/// - Mark as read / mark all as read
-/// - Pull-to-refresh
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
 
@@ -31,7 +25,6 @@ class NotificationsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Уведомления'),
         actions: [
-          // Mark all as read button
           notificationsAsync.whenOrNull(
                 data: (list) {
                   final hasUnread = list.any((n) => !n.isRead);
@@ -83,14 +76,12 @@ class NotificationsScreen extends ConsumerWidget {
                     _log.d('[FIX] notification tapped: id=${notification.id}, '
                         'type=${notification.type}, orderId=${notification.orderId}');
 
-                    // Mark as read
                     if (!notification.isRead) {
                       ref
                           .read(notificationsListProvider.notifier)
                           .markAsRead(notification.id);
                     }
 
-                    // Navigate to order if available
                     if (notification.orderId != null) {
                       context.push('/orders/${notification.orderId}');
                     }
@@ -105,7 +96,6 @@ class NotificationsScreen extends ConsumerWidget {
   }
 }
 
-/// Single notification card.
 class _NotificationCard extends StatelessWidget {
   final AppNotification notification;
   final VoidCallback onTap;
@@ -122,7 +112,6 @@ class _NotificationCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Icon based on type
           Container(
             width: 40,
             height: 40,
@@ -138,7 +127,6 @@ class _NotificationCard extends StatelessWidget {
           ),
           const SizedBox(width: DeskflowSpacing.md),
 
-          // Content
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,7 +162,6 @@ class _NotificationCard extends StatelessWidget {
             ),
           ),
 
-          // Unread indicator
           if (!notification.isRead)
             Container(
               width: 8,

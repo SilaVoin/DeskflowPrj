@@ -236,6 +236,16 @@ void main() {
     expect(find.text('Запрос 4'), findsOneWidget);
   });
 
+  testWidgets('browse cards render numeric metrics inside dedicated dark badges', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildSubject());
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('search-section-count-Заказы')), findsOneWidget);
+    expect(find.byKey(const Key('search-order-amount-pill-o1')), findsOneWidget);
+  });
+
   testWidgets('tapping history row runs search and saves query', (
     tester,
   ) async {
@@ -278,6 +288,7 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const Key('search-filter-surface')), findsOneWidget);
     expect(find.text('Новый'), findsNothing);
 
     await tester.tap(find.byKey(const Key('search-filter-orders')));

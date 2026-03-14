@@ -7,15 +7,12 @@ import 'package:deskflow/features/orders/domain/order.dart';
 
 final _log = AppLogger.getLogger('CustomerRepository');
 
-/// Handles all customer-related database operations.
 class CustomerRepository {
   final SupabaseClient _client;
 
   CustomerRepository(this._client);
 
-  // ──────────────────────────── List ─────────────────────────────────
 
-  /// Fetch all customers for an organization with order stats.
   Future<List<Customer>> getCustomers({
     required String orgId,
     String? search,
@@ -42,7 +39,6 @@ class CustomerRepository {
 
       return (data as List).map((e) {
         final json = Map<String, dynamic>.from(e as Map<String, dynamic>);
-        // Extract aggregated order count
         final ordersAgg = json.remove('orders') as List?;
         final count = ordersAgg?.isNotEmpty == true
             ? (ordersAgg!.first['count'] as num?)?.toInt() ?? 0
@@ -53,9 +49,7 @@ class CustomerRepository {
     });
   }
 
-  // ──────────────────────────── Detail ───────────────────────────────
 
-  /// Fetch single customer with order stats.
   Future<Customer> getCustomer(String customerId) async {
     _log.d('getCustomer: customerId=$customerId');
     return supabaseGuard(() async {
@@ -65,7 +59,6 @@ class CustomerRepository {
           .eq('id', customerId)
           .single();
 
-      // Fetch aggregated stats separately
       final stats = await _client
           .from('orders')
           .select('id, total_amount')
@@ -85,9 +78,7 @@ class CustomerRepository {
     });
   }
 
-  // ──────────────────────────── Customer Orders ─────────────────────
 
-  /// Fetch orders for a specific customer.
   Future<List<Order>> getCustomerOrders(String customerId) async {
     _log.d('getCustomerOrders: customerId=$customerId');
     return supabaseGuard(() async {
@@ -103,9 +94,7 @@ class CustomerRepository {
     });
   }
 
-  // ──────────────────────────── Create/Update ────────────────────────
 
-  /// Create a new customer.
   Future<Customer> createCustomer({
     required String orgId,
     required String name,
@@ -133,7 +122,6 @@ class CustomerRepository {
     });
   }
 
-  /// Update existing customer.
   Future<Customer> updateCustomer({
     required String customerId,
     required String name,
@@ -161,7 +149,6 @@ class CustomerRepository {
     });
   }
 
-  /// Delete a customer (only if no orders linked).
   Future<void> deleteCustomer(String customerId) async {
     _log.d('deleteCustomer: customerId=$customerId');
     return supabaseGuard(() async {

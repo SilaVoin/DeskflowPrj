@@ -1,12 +1,26 @@
-/// Notification model — maps to the `notifications` table in Supabase.
+enum NotificationType {
+  newOrder,
+  statusChange,
+  chatMessage;
+
+  static NotificationType fromString(String value) {
+    return switch (value) {
+      'new_order' => NotificationType.newOrder,
+      'status_change' => NotificationType.statusChange,
+      'chat_message' => NotificationType.chatMessage,
+      _ => NotificationType.newOrder,
+    };
+  }
+}
+
 class AppNotification {
   final String id;
   final String orgId;
   final String userId;
+  final String? orderId;
   final NotificationType type;
   final String title;
   final String? body;
-  final String? orderId;
   final bool isRead;
   final DateTime createdAt;
 
@@ -14,11 +28,11 @@ class AppNotification {
     required this.id,
     required this.orgId,
     required this.userId,
+    this.orderId,
     required this.type,
     required this.title,
     this.body,
-    this.orderId,
-    required this.isRead,
+    this.isRead = false,
     required this.createdAt,
   });
 
@@ -27,10 +41,10 @@ class AppNotification {
       id: json['id'] as String,
       orgId: json['org_id'] as String,
       userId: json['user_id'] as String,
-      type: NotificationType.fromString(json['type'] as String),
+      orderId: json['order_id'] as String?,
+      type: NotificationType.fromString(json['type'] as String? ?? ''),
       title: json['title'] as String,
       body: json['body'] as String?,
-      orderId: json['order_id'] as String?,
       isRead: json['is_read'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
@@ -41,42 +55,12 @@ class AppNotification {
       id: id,
       orgId: orgId,
       userId: userId,
+      orderId: orderId,
       type: type,
       title: title,
       body: body,
-      orderId: orderId,
       isRead: isRead ?? this.isRead,
       createdAt: createdAt,
     );
-  }
-}
-
-enum NotificationType {
-  newOrder,
-  statusChange,
-  chatMessage;
-
-  static NotificationType fromString(String value) {
-    switch (value) {
-      case 'new_order':
-        return NotificationType.newOrder;
-      case 'status_change':
-        return NotificationType.statusChange;
-      case 'chat_message':
-        return NotificationType.chatMessage;
-      default:
-        return NotificationType.newOrder;
-    }
-  }
-
-  String toDbValue() {
-    switch (this) {
-      case NotificationType.newOrder:
-        return 'new_order';
-      case NotificationType.statusChange:
-        return 'status_change';
-      case NotificationType.chatMessage:
-        return 'chat_message';
-    }
   }
 }

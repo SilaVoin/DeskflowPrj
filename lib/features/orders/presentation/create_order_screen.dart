@@ -8,20 +8,24 @@ import 'package:deskflow/core/theme/deskflow_theme.dart';
 import 'package:deskflow/core/utils/app_logger.dart';
 import 'package:deskflow/core/utils/currency_formatter.dart';
 import 'package:deskflow/core/widgets/glass_card.dart';
+import 'package:deskflow/core/widgets/glass_chip.dart';
 import 'package:deskflow/core/widgets/glass_text_field.dart';
 import 'package:deskflow/core/widgets/pill_button.dart';
 import 'package:deskflow/features/customers/domain/customer_providers.dart';
 import 'package:deskflow/features/orders/domain/customer.dart';
+import 'package:deskflow/features/orders/domain/order_composition.dart';
 import 'package:deskflow/features/orders/domain/order_notifier.dart';
+import 'package:deskflow/features/orders/domain/order_providers.dart';
+import 'package:deskflow/features/orders/domain/order_template.dart';
 import 'package:deskflow/features/products/domain/product.dart';
 import 'package:deskflow/features/products/domain/product_providers.dart';
 
 final _log = AppLogger.getLogger('CreateOrderScreen');
 
-
-/// Create new order screen.
 class CreateOrderScreen extends ConsumerStatefulWidget {
-  const CreateOrderScreen({super.key});
+  const CreateOrderScreen({super.key, this.initialComposition});
+
+  final OrderComposition? initialComposition;
 
   @override
   ConsumerState<CreateOrderScreen> createState() => _CreateOrderScreenState();
@@ -34,6 +38,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   Customer? _selectedCustomer;
   final List<_OrderItemDraft> _items = [];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialComposition != null) {
+      _replaceComposition(widget.initialComposition!);
+    }
+  }
 
   @override
   void dispose() {
@@ -51,6 +63,19 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
   double get _grandTotal => _itemsTotal + _deliveryCost;
 
+  OrderComposition get _currentComposition => OrderComposition(
+    items: _items
+        .map(
+          (item) => OrderCompositionItem(
+            productId: item.productId,
+            productName: item.productName,
+            unitPrice: item.unitPrice,
+            quantity: item.quantity,
+          ),
+        )
+        .toList(),
+  );
+
   Future<void> _handleCreate() async {
     final orderNotifier = ref.read(orderNotifierProvider.notifier);
 
@@ -61,12 +86,14 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           ? null
           : _notesController.text.trim(),
       items: _items
-          .map((item) => {
-                'product_id': item.productId,
-                'product_name': item.productName,
-                'unit_price': item.unitPrice,
-                'quantity': item.quantity,
-              })
+          .map(
+            (item) => {
+              'product_id': item.productId,
+              'product_name': item.productName,
+              'unit_price': item.unitPrice,
+              'quantity': item.quantity,
+            },
+          )
           .toList(),
     );
 
@@ -75,7 +102,114 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     }
   }
 
-  // [FIX] Customer picker — shows bottom sheet with search and selection
+  void _replaceComposition(OrderComposition composition) {
+    _items
+      ..clear()
+      ..addAll(
+        composition.items.map(
+          (item) => _OrderItemDraft(
+            productId: item.productId,
+            productName: item.productName,
+            unitPrice: item.unitPrice,
+            quantity: item.quantity,
+          ),
+        ),
+      );
+  }
+
+  void _addRecentProduct(Product product) {
+    final existing = _items.indexWhere((i) => i.productId == product.id);
+    setState(() {
+      if (existing >= 0) {
+        _items[existing].quantity += 1;
+      } else {
+        _items.add(
+          _OrderItemDraft(
+            productId: product.id,
+            productName: product.name,
+            unitPrice: product.price,
+            quantity: 1,
+          ),
+        );
+      }
+    });
+  }
+
+  Future<void> _applyTemplate(OrderTemplate template) async {
+    if (_items.isNotEmpty) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: DeskflowColors.glassSurfaceElevated,
+          title: const Text('Заменить текущий состав заказа?'),
+          content: Text(
+            'Шаблон "${template.name}" заменит добавленные товары.',
+            style: DeskflowTypography.bodySmall,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Отмена'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Применить'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true) return;
+    }
+
+    setState(() {
+      _replaceComposition(template.composition);
+    });
+  }
+
+  Future<void> _showSaveTemplateDialog() async {
+    if (_items.isEmpty) return;
+
+    final controller = TextEditingController();
+    final saved = await showDialog<String>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.68),
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: DeskflowColors.modalSurface,
+        surfaceTintColor: Colors.transparent,
+        title: const Text('Новый шаблон'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Название шаблона'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(controller.text.trim()),
+            child: const Text('Сохранить шаблон'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || saved == null || saved.isEmpty) return;
+
+    final template = await ref
+        .read(orderNotifierProvider.notifier)
+        .saveOrderTemplate(name: saved, composition: _currentComposition);
+
+    if (!mounted || template == null) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Шаблон "${template.name}" сохранён')),
+    );
+  }
+
   void _showCustomerPicker() {
     _log.d('[FIX] _showCustomerPicker: opening customer picker');
     showModalBottomSheet(
@@ -84,7 +218,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => _CustomerPickerSheet(
         onCustomerSelected: (customer) {
-          _log.d('[FIX] _showCustomerPicker: selected customer=${customer.name}');
+          _log.d(
+            '[FIX] _showCustomerPicker: selected customer=${customer.name}',
+          );
           setState(() => _selectedCustomer = customer);
         },
       ),
@@ -100,19 +236,20 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         ref: ref,
         onProductSelected: (product, quantity) {
           setState(() {
-            // Merge with existing item if same product
             final existing = _items.indexWhere(
               (i) => i.productId == product.id,
             );
             if (existing >= 0) {
               _items[existing].quantity += quantity;
             } else {
-              _items.add(_OrderItemDraft(
-                productId: product.id,
-                productName: product.name,
-                unitPrice: product.price,
-                quantity: quantity,
-              ));
+              _items.add(
+                _OrderItemDraft(
+                  productId: product.id,
+                  productName: product.name,
+                  unitPrice: product.price,
+                  quantity: quantity,
+                ),
+              );
             }
           });
         },
@@ -127,11 +264,13 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
       builder: (ctx) => _ManualItemDialog(
         onAdd: (name, price, qty) {
           setState(() {
-            _items.add(_OrderItemDraft(
-              productName: name,
-              unitPrice: price,
-              quantity: qty,
-            ));
+            _items.add(
+              _OrderItemDraft(
+                productName: name,
+                unitPrice: price,
+                quantity: qty,
+              ),
+            );
           });
         },
       ),
@@ -142,6 +281,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   Widget build(BuildContext context) {
     final orderState = ref.watch(orderNotifierProvider);
     final isLoading = orderState.isLoading;
+    final templatesAsync = ref.watch(orderTemplatesProvider);
+    final recentCustomersAsync = ref.watch(recentOrderCustomersProvider);
+    final recentProductsAsync = ref.watch(recentOrderProductsProvider);
 
     ref.listen<AsyncValue<void>>(orderNotifierProvider, (_, next) {
       if (next.hasError) {
@@ -183,7 +325,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Customer section ──
               const Text('Клиент', style: DeskflowTypography.h3),
               const SizedBox(height: DeskflowSpacing.sm),
               GestureDetector(
@@ -197,31 +338,35 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                           children: [
                             Expanded(
                               child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(_selectedCustomer!.name,
-                                      style: DeskflowTypography.body),
+                                  Text(
+                                    _selectedCustomer!.name,
+                                    style: DeskflowTypography.body,
+                                  ),
                                   if (_selectedCustomer!.phone != null)
-                                    Text(_selectedCustomer!.phone!,
-                                        style:
-                                            DeskflowTypography.bodySmall),
+                                    Text(
+                                      _selectedCustomer!.phone!,
+                                      style: DeskflowTypography.bodySmall,
+                                    ),
                                 ],
                               ),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.close_rounded,
-                                  size: 18),
-                              onPressed: () => setState(
-                                  () => _selectedCustomer = null),
+                              icon: const Icon(Icons.close_rounded, size: 18),
+                              onPressed: () =>
+                                  setState(() => _selectedCustomer = null),
                             ),
                           ],
                         ),
                       ] else ...[
                         Row(
                           children: [
-                            const Icon(Icons.person_add_rounded,
-                                size: 18, color: DeskflowColors.textTertiary),
+                            const Icon(
+                              Icons.person_add_rounded,
+                              size: 18,
+                              color: DeskflowColors.textTertiary,
+                            ),
                             const SizedBox(width: DeskflowSpacing.sm),
                             Text(
                               'Выбрать клиента (необязательно)',
@@ -239,19 +384,39 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
               const SizedBox(height: DeskflowSpacing.xl),
 
-              // ── Items section ──
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Товары', style: DeskflowTypography.h3),
-                  TextButton.icon(
-                    icon: const Icon(Icons.add_rounded, size: 18),
-                    label: const Text('Добавить'),
-                    onPressed: _addProductFromCatalog,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_items.isNotEmpty)
+                        TextButton(
+                          onPressed: _showSaveTemplateDialog,
+                          child: const Text('Сохранить как шаблон'),
+                        ),
+                      TextButton.icon(
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        label: const Text('Добавить'),
+                        onPressed: _addProductFromCatalog,
+                      ),
+                    ],
                   ),
                 ],
               ),
               const SizedBox(height: DeskflowSpacing.sm),
+              _QuickSourcesCard(
+                templatesAsync: templatesAsync,
+                recentCustomersAsync: recentCustomersAsync,
+                recentProductsAsync: recentProductsAsync,
+                onTemplateTap: _applyTemplate,
+                onCustomerTap: (customer) {
+                  setState(() => _selectedCustomer = customer);
+                },
+                onProductTap: _addRecentProduct,
+              ),
+              const SizedBox(height: DeskflowSpacing.md),
               if (_items.isEmpty)
                 GlassCard(
                   child: Center(
@@ -265,35 +430,33 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 ...List.generate(_items.length, (i) {
                   final item = _items[i];
                   return Padding(
-                    padding: const EdgeInsets.only(
-                        bottom: DeskflowSpacing.sm),
+                    padding: const EdgeInsets.only(bottom: DeskflowSpacing.sm),
                     child: GlassCard(
-                      padding:
-                          const EdgeInsets.all(DeskflowSpacing.md),
+                      padding: const EdgeInsets.all(DeskflowSpacing.md),
                       child: Row(
                         children: [
                           Expanded(
                             child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(item.productName,
-                                    style: DeskflowTypography.body),
+                                Text(
+                                  item.productName,
+                                  style: DeskflowTypography.body,
+                                ),
                                 Text(
                                   '${item.quantity} × ${CurrencyFormatter.formatCompact(item.unitPrice)} = ${CurrencyFormatter.formatCompact(item.unitPrice * item.quantity)}',
-                                  style:
-                                      DeskflowTypography.bodySmall,
+                                  style: DeskflowTypography.bodySmall,
                                 ),
                               ],
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.delete_outline,
-                                size: 18,
-                                color:
-                                    DeskflowColors.destructiveSolid),
-                            onPressed: () =>
-                                setState(() => _items.removeAt(i)),
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              size: 18,
+                              color: DeskflowColors.destructiveSolid,
+                            ),
+                            onPressed: () => setState(() => _items.removeAt(i)),
                           ),
                         ],
                       ),
@@ -303,7 +466,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
               const SizedBox(height: DeskflowSpacing.xl),
 
-              // ── Delivery ──
               const Text('Доставка', style: DeskflowTypography.h3),
               const SizedBox(height: DeskflowSpacing.sm),
               GlassCard(
@@ -317,7 +479,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
               const SizedBox(height: DeskflowSpacing.xl),
 
-              // ── Notes ──
               const Text('Заметки', style: DeskflowTypography.h3),
               const SizedBox(height: DeskflowSpacing.sm),
               GlassCard(
@@ -331,13 +492,11 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
 
               const SizedBox(height: DeskflowSpacing.xl),
 
-              // ── Total ──
               GlassCard(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Итого',
-                        style: DeskflowTypography.h2),
+                    const Text('Итого', style: DeskflowTypography.h2),
                     Text(
                       CurrencyFormatter.formatCompact(_grandTotal),
                       style: DeskflowTypography.h2,
@@ -355,7 +514,120 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   }
 }
 
-/// Draft order item (before saving to DB).
+class _QuickSourcesCard extends StatelessWidget {
+  const _QuickSourcesCard({
+    required this.templatesAsync,
+    required this.recentCustomersAsync,
+    required this.recentProductsAsync,
+    required this.onTemplateTap,
+    required this.onCustomerTap,
+    required this.onProductTap,
+  });
+
+  final AsyncValue<List<OrderTemplate>> templatesAsync;
+  final AsyncValue<List<Customer>> recentCustomersAsync;
+  final AsyncValue<List<Product>> recentProductsAsync;
+  final ValueChanged<OrderTemplate> onTemplateTap;
+  final ValueChanged<Customer> onCustomerTap;
+  final ValueChanged<Product> onProductTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      elevated: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Быстрые источники', style: DeskflowTypography.h3),
+          const SizedBox(height: DeskflowSpacing.md),
+          _QuickSourceGroup<OrderTemplate>(
+            title: 'Шаблоны',
+            itemsAsync: templatesAsync,
+            labelBuilder: (template) => template.name,
+            onTap: onTemplateTap,
+          ),
+          const SizedBox(height: DeskflowSpacing.md),
+          _QuickSourceGroup<Customer>(
+            title: 'Последние клиенты',
+            itemsAsync: recentCustomersAsync,
+            labelBuilder: (customer) => customer.name,
+            onTap: onCustomerTap,
+          ),
+          const SizedBox(height: DeskflowSpacing.md),
+          _QuickSourceGroup<Product>(
+            title: 'Последние товары',
+            itemsAsync: recentProductsAsync,
+            labelBuilder: (product) => product.name,
+            onTap: onProductTap,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickSourceGroup<T> extends StatelessWidget {
+  const _QuickSourceGroup({
+    required this.title,
+    required this.itemsAsync,
+    required this.labelBuilder,
+    required this.onTap,
+  });
+
+  final String title;
+  final AsyncValue<List<T>> itemsAsync;
+  final String Function(T item) labelBuilder;
+  final ValueChanged<T> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: DeskflowTypography.bodySmall.copyWith(
+            color: DeskflowColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: DeskflowSpacing.sm),
+        itemsAsync.when(
+          data: (items) {
+            if (items.isEmpty) {
+              return Text(
+                'Пока пусто',
+                style: DeskflowTypography.bodySmall.copyWith(
+                  color: DeskflowColors.textTertiary,
+                ),
+              );
+            }
+
+            return Wrap(
+              spacing: DeskflowSpacing.sm,
+              runSpacing: DeskflowSpacing.sm,
+              children: items
+                  .map(
+                    (item) => GlassChip(
+                      label: labelBuilder(item),
+                      onTap: () => onTap(item),
+                    ),
+                  )
+                  .toList(),
+            );
+          },
+          loading: () => const LinearProgressIndicator(minHeight: 2),
+          error: (error, stackTrace) => Text(
+            'Не удалось загрузить',
+            style: DeskflowTypography.bodySmall.copyWith(
+              color: DeskflowColors.textTertiary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _OrderItemDraft {
   final String? productId;
   final String productName;
@@ -370,16 +642,9 @@ class _OrderItemDraft {
   });
 }
 
-/// Dialog for manually entering a custom order item.
-///
-/// Extracted into a [StatefulWidget] so that the three
-/// [TextEditingController]s are properly disposed when the dialog closes,
-/// avoiding the memory leak that occurs when controllers are created
-/// inside a [showDialog] builder function.
 class _ManualItemDialog extends StatefulWidget {
   const _ManualItemDialog({required this.onAdd});
 
-  /// Called with (name, price, quantity) when the user confirms.
   final void Function(String name, double price, int qty) onAdd;
 
   @override
@@ -443,16 +708,12 @@ class _ManualItemDialogState extends State<_ManualItemDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Отмена'),
         ),
-        TextButton(
-          onPressed: _submit,
-          child: const Text('Добавить'),
-        ),
+        TextButton(onPressed: _submit, child: const Text('Добавить')),
       ],
     );
   }
 }
 
-/// Bottom sheet for picking a product from the catalog.
 class _CatalogPickerSheet extends HookConsumerWidget {
   const _CatalogPickerSheet({
     required this.ref,
@@ -492,7 +753,6 @@ class _CatalogPickerSheet extends HookConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Handle
           Center(
             child: Container(
               width: 40,
@@ -505,7 +765,6 @@ class _CatalogPickerSheet extends HookConsumerWidget {
           ),
           const SizedBox(height: DeskflowSpacing.md),
 
-          // Title row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -521,52 +780,48 @@ class _CatalogPickerSheet extends HookConsumerWidget {
           ),
           const SizedBox(height: DeskflowSpacing.md),
 
-          // Search bar
           TextField(
             autofocus: false,
             decoration: InputDecoration(
               hintText: 'Поиск в каталоге...',
               hintStyle: const TextStyle(color: DeskflowColors.textSecondary),
-              prefixIcon: const Icon(Icons.search_rounded,
-                  color: DeskflowColors.textSecondary),
+              prefixIcon: const Icon(
+                Icons.search_rounded,
+                color: DeskflowColors.textSecondary,
+              ),
               filled: true,
               fillColor: DeskflowColors.glassSurface,
               border: OutlineInputBorder(
-                borderRadius:
-                    BorderRadius.circular(DeskflowRadius.pill),
-                borderSide: const BorderSide(
-                  color: DeskflowColors.glassBorder,
-                ),
+                borderRadius: BorderRadius.circular(DeskflowRadius.pill),
+                borderSide: const BorderSide(color: DeskflowColors.glassBorder),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius:
-                    BorderRadius.circular(DeskflowRadius.pill),
-                borderSide: const BorderSide(
-                  color: DeskflowColors.glassBorder,
-                ),
+                borderRadius: BorderRadius.circular(DeskflowRadius.pill),
+                borderSide: const BorderSide(color: DeskflowColors.glassBorder),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius:
-                    BorderRadius.circular(DeskflowRadius.pill),
+                borderRadius: BorderRadius.circular(DeskflowRadius.pill),
                 borderSide: const BorderSide(
                   color: DeskflowColors.primarySolid,
                 ),
               ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: DeskflowSpacing.md),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: DeskflowSpacing.md,
+              ),
             ),
             style: const TextStyle(color: DeskflowColors.textPrimary),
             onChanged: (v) => searchQuery.value = v,
           ),
           const SizedBox(height: DeskflowSpacing.md),
 
-          // Product list
           Expanded(
             child: productsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(
-                child: Text(e.toString(),
-                    style: const TextStyle(color: DeskflowColors.textSecondary)),
+                child: Text(
+                  e.toString(),
+                  style: const TextStyle(color: DeskflowColors.textSecondary),
+                ),
               ),
               data: (paginated) {
                 final products = paginated.items;
@@ -575,15 +830,19 @@ class _CatalogPickerSheet extends HookConsumerWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.shopping_bag_outlined,
-                            size: 48, color: DeskflowColors.textTertiary),
+                        const Icon(
+                          Icons.shopping_bag_outlined,
+                          size: 48,
+                          color: DeskflowColors.textTertiary,
+                        ),
                         const SizedBox(height: DeskflowSpacing.sm),
                         Text(
                           searchQuery.value.isNotEmpty
                               ? 'Ничего не найдено'
                               : 'Каталог пуст',
                           style: const TextStyle(
-                              color: DeskflowColors.textSecondary),
+                            color: DeskflowColors.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -613,12 +872,8 @@ class _CatalogPickerSheet extends HookConsumerWidget {
   }
 }
 
-/// Single product row in the catalog picker.
 class _CatalogProductTile extends HookWidget {
-  const _CatalogProductTile({
-    required this.product,
-    required this.onAdd,
-  });
+  const _CatalogProductTile({required this.product, required this.onAdd});
 
   final Product product;
   final void Function(int qty) onAdd;
@@ -634,7 +889,6 @@ class _CatalogProductTile extends HookWidget {
       ),
       child: Row(
         children: [
-          // Product info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -648,14 +902,12 @@ class _CatalogProductTile extends HookWidget {
             ),
           ),
 
-          // Quantity stepper
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
                 icon: const Icon(Icons.remove_rounded, size: 18),
-                onPressed:
-                    qty.value > 1 ? () => qty.value-- : null,
+                onPressed: qty.value > 1 ? () => qty.value-- : null,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
               ),
@@ -674,7 +926,6 @@ class _CatalogProductTile extends HookWidget {
                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
               ),
               const SizedBox(width: DeskflowSpacing.sm),
-              // Add button
               FilledButton(
                 onPressed: () => onAdd(qty.value),
                 style: FilledButton.styleFrom(
@@ -696,11 +947,8 @@ class _CatalogProductTile extends HookWidget {
   }
 }
 
-/// [FIX] Bottom sheet for picking a customer from the organization.
 class _CustomerPickerSheet extends HookConsumerWidget {
-  const _CustomerPickerSheet({
-    required this.onCustomerSelected,
-  });
+  const _CustomerPickerSheet({required this.onCustomerSelected});
 
   final void Function(Customer customer) onCustomerSelected;
 
@@ -732,7 +980,6 @@ class _CustomerPickerSheet extends HookConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Handle
           Center(
             child: Container(
               width: 40,
@@ -745,18 +992,18 @@ class _CustomerPickerSheet extends HookConsumerWidget {
           ),
           const SizedBox(height: DeskflowSpacing.md),
 
-          // Title
           const Text('Выбрать клиента', style: DeskflowTypography.h2),
           const SizedBox(height: DeskflowSpacing.md),
 
-          // Search bar
           TextField(
             autofocus: false,
             decoration: InputDecoration(
               hintText: 'Поиск клиентов...',
               hintStyle: const TextStyle(color: DeskflowColors.textSecondary),
-              prefixIcon: const Icon(Icons.search_rounded,
-                  color: DeskflowColors.textSecondary),
+              prefixIcon: const Icon(
+                Icons.search_rounded,
+                color: DeskflowColors.textSecondary,
+              ),
               filled: true,
               fillColor: DeskflowColors.glassSurface,
               border: OutlineInputBorder(
@@ -773,7 +1020,6 @@ class _CustomerPickerSheet extends HookConsumerWidget {
           ),
           const SizedBox(height: DeskflowSpacing.md),
 
-          // Customer list
           Expanded(
             child: customersAsync.when(
               loading: () => const Center(
@@ -827,14 +1073,20 @@ class _CustomerPickerSheet extends HookConsumerWidget {
                           ),
                         ),
                       ),
-                      title: Text(customer.name,
-                          style: DeskflowTypography.body),
+                      title: Text(
+                        customer.name,
+                        style: DeskflowTypography.body,
+                      ),
                       subtitle: customer.phone != null
-                          ? Text(customer.phone!,
-                              style: DeskflowTypography.bodySmall)
+                          ? Text(
+                              customer.phone!,
+                              style: DeskflowTypography.bodySmall,
+                            )
                           : null,
                       onTap: () {
-                        _log.d('[FIX] _CustomerPickerSheet: selected ${customer.name}');
+                        _log.d(
+                          '[FIX] _CustomerPickerSheet: selected ${customer.name}',
+                        );
                         Navigator.pop(context);
                         onCustomerSelected(customer);
                       },

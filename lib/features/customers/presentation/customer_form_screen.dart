@@ -14,9 +14,6 @@ import 'package:deskflow/features/customers/domain/customer_providers.dart';
 import 'package:deskflow/features/orders/domain/customer.dart';
 import 'package:deskflow/features/org/domain/org_providers.dart';
 
-/// Create or edit customer screen.
-///
-/// If [customerId] is provided — edit mode, else create mode.
 class CustomerFormScreen extends HookConsumerWidget {
   final String? customerId;
 
@@ -26,7 +23,6 @@ class CustomerFormScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // For edit mode, fetch existing data
     final customerAsync =
         isEditing ? ref.watch(customerDetailProvider(customerId!)) : null;
 
@@ -87,7 +83,6 @@ class _CustomerForm extends HookConsumerWidget {
         final repo = ref.read(customerRepositoryProvider);
 
         if (customerId != null) {
-          // Edit mode
           await repo.updateCustomer(
             customerId: customerId!,
             name: nameCtrl.text.trim(),
@@ -106,7 +101,6 @@ class _CustomerForm extends HookConsumerWidget {
           );
           ref.invalidate(customerDetailProvider(customerId!));
         } else {
-          // Create mode
           final orgId = ref.read(currentOrgIdProvider);
           if (orgId == null) return;
 
@@ -128,7 +122,6 @@ class _CustomerForm extends HookConsumerWidget {
           );
         }
 
-        // Invalidate list and go back
         ref.invalidate(customersListProvider);
 
         if (context.mounted) {
@@ -162,7 +155,6 @@ class _CustomerForm extends HookConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Name (required) ──
             GlassCard(
               child: Padding(
                 padding: const EdgeInsets.all(DeskflowSpacing.lg),
@@ -192,7 +184,6 @@ class _CustomerForm extends HookConsumerWidget {
             ),
             const SizedBox(height: DeskflowSpacing.lg),
 
-            // ── Contact ──
             GlassCard(
               child: Padding(
                 padding: const EdgeInsets.all(DeskflowSpacing.lg),
@@ -236,7 +227,6 @@ class _CustomerForm extends HookConsumerWidget {
             ),
             const SizedBox(height: DeskflowSpacing.lg),
 
-            // ── Notes ──
             GlassCard(
               child: Padding(
                 padding: const EdgeInsets.all(DeskflowSpacing.lg),
@@ -257,7 +247,6 @@ class _CustomerForm extends HookConsumerWidget {
             ),
             const SizedBox(height: DeskflowSpacing.xl),
 
-            // ── Save button ──
             PillButton(
               label: customerId != null ? 'Сохранить' : 'Создать клиента',
               onPressed: isLoading.value ? null : handleSave,
@@ -271,7 +260,6 @@ class _CustomerForm extends HookConsumerWidget {
   }
 }
 
-/// Loading skeleton for form.
 class _FormSkeleton extends StatelessWidget {
   const _FormSkeleton();
 

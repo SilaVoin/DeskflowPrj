@@ -4,17 +4,6 @@ import 'package:flutter/material.dart';
 
 import 'package:deskflow/core/theme/deskflow_theme.dart';
 
-/// Glass-styled pill-shaped search bar.
-///
-/// Displays a capsule with a search icon and placeholder text.
-/// When focused, optionally expands and shows a cancel button.
-///
-/// ```dart
-/// PillSearchBar(
-///   hintText: 'Поиск заказов...',
-///   onChanged: (query) => print(query),
-/// )
-/// ```
 class PillSearchBar extends StatefulWidget {
   const PillSearchBar({
     super.key,
@@ -24,6 +13,9 @@ class PillSearchBar extends StatefulWidget {
     this.controller,
     this.autofocus = false,
     this.onClear,
+    this.height = 44,
+    this.horizontalPadding = DeskflowSpacing.md,
+    this.gapAfterIcon = DeskflowSpacing.sm,
   });
 
   final String hintText;
@@ -32,6 +24,9 @@ class PillSearchBar extends StatefulWidget {
   final TextEditingController? controller;
   final bool autofocus;
   final VoidCallback? onClear;
+  final double height;
+  final double horizontalPadding;
+  final double gapAfterIcon;
 
   @override
   State<PillSearchBar> createState() => _PillSearchBarState();
@@ -86,22 +81,22 @@ class _PillSearchBarState extends State<PillSearchBar> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeInOut,
-          height: 44,
+          height: widget.height,
           decoration: BoxDecoration(
             color: _hasFocus
-                ? DeskflowColors.glassSurfaceElevated
-                : DeskflowColors.glassSurface,
+                ? DeskflowColors.shellGlassSurfaceFocused
+                : DeskflowColors.shellGlassSurface,
             borderRadius: BorderRadius.circular(DeskflowRadius.pill),
             border: Border.all(
               color: _hasFocus
                   ? DeskflowColors.primarySolid.withValues(alpha: 0.4)
-                  : DeskflowColors.glassBorder,
-              width: 0.5,
+                  : DeskflowColors.glassBorderStrong.withValues(alpha: 0.72),
+              width: 0.75,
             ),
           ),
           child: Row(
             children: [
-              const SizedBox(width: DeskflowSpacing.md),
+              SizedBox(width: widget.horizontalPadding),
               Icon(
                 Icons.search_rounded,
                 size: 20,
@@ -109,7 +104,7 @@ class _PillSearchBarState extends State<PillSearchBar> {
                     ? DeskflowColors.textSecondary
                     : DeskflowColors.textTertiary,
               ),
-              const SizedBox(width: DeskflowSpacing.sm),
+              SizedBox(width: widget.gapAfterIcon),
               Expanded(
                 child: TextField(
                   controller: _controller,
@@ -142,8 +137,8 @@ class _PillSearchBarState extends State<PillSearchBar> {
                     minWidth: 32,
                     minHeight: 32,
                   ),
-                ),
-              const SizedBox(width: DeskflowSpacing.xs),
+              ),
+              SizedBox(width: widget.horizontalPadding * 0.5),
             ],
           ),
         ),

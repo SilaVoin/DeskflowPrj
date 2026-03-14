@@ -1,7 +1,9 @@
-/// Message status for optimistic UI.
-enum MessageStatus { sending, sent, error }
+enum MessageStatus {
+  sending,
+  sent,
+  error,
+}
 
-/// Attachment model for chat messages.
 class Attachment {
   final String id;
   final String url;
@@ -17,22 +19,12 @@ class Attachment {
     required this.sizeBytes,
   });
 
-  /// Whether this attachment is an image.
-  bool get isImage =>
-      mimeType.startsWith('image/') ||
-      fileName.endsWith('.jpg') ||
-      fileName.endsWith('.jpeg') ||
-      fileName.endsWith('.png') ||
-      fileName.endsWith('.gif') ||
-      fileName.endsWith('.webp');
+  bool get isImage => mimeType.startsWith('image/');
 
-  /// Human-readable file size.
   String get formattedSize {
-    if (sizeBytes < 1024) return '$sizeBytes B';
-    if (sizeBytes < 1024 * 1024) {
-      return '${(sizeBytes / 1024).toStringAsFixed(1)} KB';
-    }
-    return '${(sizeBytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    if (sizeBytes < 1024) return '$sizeBytes \u0411';
+    if (sizeBytes < 1024 * 1024) return '${(sizeBytes / 1024).toStringAsFixed(1)} \u041a\u0411';
+    return '${(sizeBytes / (1024 * 1024)).toStringAsFixed(1)} \u041c\u0411';
   }
 
   factory Attachment.fromJson(Map<String, dynamic> json) {
@@ -44,17 +36,8 @@ class Attachment {
       sizeBytes: json['size_bytes'] as int? ?? 0,
     );
   }
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'url': url,
-        'file_name': fileName,
-        'mime_type': mimeType,
-        'size_bytes': sizeBytes,
-      };
 }
 
-/// Chat message domain model.
 class ChatMessage {
   final String id;
   final String orderId;
@@ -64,8 +47,6 @@ class ChatMessage {
   final List<Attachment> attachments;
   final MessageStatus status;
   final DateTime createdAt;
-
-  /// Whether this is a system message (status change, item added, etc.)
   final bool isSystem;
   final String? systemAction;
 
@@ -82,42 +63,24 @@ class ChatMessage {
     this.systemAction,
   });
 
-  /// Display initials for the sender avatar.
   String get senderInitials {
     if (senderName == null || senderName!.isEmpty) return '?';
-    final parts = senderName!.trim().split(' ');
+    final parts = senderName!.split(' ');
     if (parts.length >= 2) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
     return parts[0][0].toUpperCase();
   }
 
-  /// Create a copy with updated status (for optimistic UI).
-  ChatMessage copyWith({MessageStatus? status, String? id}) {
-    return ChatMessage(
-      id: id ?? this.id,
-      orderId: orderId,
-      senderId: senderId,
-      senderName: senderName,
-      text: text,
-      attachments: attachments,
-      status: status ?? this.status,
-      createdAt: createdAt,
-      isSystem: isSystem,
-      systemAction: systemAction,
-    );
-  }
-
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
-    // Parse sender name from joined profiles
     String? senderName;
     if (json['profiles'] != null) {
-      senderName =
-          (json['profiles'] as Map<String, dynamic>)['full_name'] as String?;
+      final profile = json['profiles'] as Map<String, dynamic>;
+      senderName = profile['full_name'] as String?;
     }
+    senderName ??= '\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c';
 
-    // Parse attachments
-    List<Attachment> attachments = [];
+    List<Attachment> attachments = const [];
     if (json['chat_attachments'] != null) {
       attachments = (json['chat_attachments'] as List)
           .map((e) => Attachment.fromJson(e as Map<String, dynamic>))
@@ -128,13 +91,28 @@ class ChatMessage {
       id: json['id'] as String,
       orderId: json['order_id'] as String,
       senderId: json['sender_id'] as String,
-      senderName: senderName ?? json['sender_name'] as String?,
+      senderName: senderName,
       text: json['text'] as String?,
       attachments: attachments,
       status: MessageStatus.sent,
       createdAt: DateTime.parse(json['created_at'] as String),
       isSystem: json['is_system'] as bool? ?? false,
       systemAction: json['system_action'] as String?,
+    );
+  }
+
+  ChatMessage copyWith({MessageStatus? status}) {
+    return ChatMessage(
+      id: id,
+      orderId: orderId,
+      senderId: senderId,
+      senderName: senderName,
+      text: text,
+      attachments: attachments,
+      status: status ?? this.status,
+      createdAt: createdAt,
+      isSystem: isSystem,
+      systemAction: systemAction,
     );
   }
 }

@@ -8,7 +8,6 @@ import 'package:deskflow/features/orders/domain/order_notifier.dart';
 import 'package:deskflow/features/orders/domain/order_providers.dart';
 import 'package:deskflow/features/orders/domain/order_status.dart';
 
-/// Bottom sheet for changing order status through the pipeline.
 class StatusChangeSheet extends ConsumerWidget {
   const StatusChangeSheet({
     super.key,
@@ -43,8 +42,6 @@ class StatusChangeSheet extends ConsumerWidget {
 
     return Container(
       decoration: const BoxDecoration(
-        // [FIX] Use opaque modal surface to prevent order detail text from
-        // bleeding through the transparent glass background.
         color: DeskflowColors.modalSurface,
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(DeskflowRadius.xl),
@@ -63,7 +60,6 @@ class StatusChangeSheet extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Drag handle
               Center(
                 child: Container(
                   width: 36,
@@ -104,7 +100,6 @@ class StatusChangeSheet extends ConsumerWidget {
   }
 }
 
-/// Pipeline step visualization with selectable statuses.
 class _PipelineView extends ConsumerWidget {
   const _PipelineView({
     required this.pipeline,
@@ -121,7 +116,6 @@ class _PipelineView extends ConsumerWidget {
     final notifierState = ref.watch(orderNotifierProvider);
     final isLoading = notifierState.isLoading;
 
-    // Find current index in pipeline
     final currentIndex =
         pipeline.indexWhere((s) => s.id == currentStatusId);
 
@@ -147,7 +141,6 @@ class _PipelineView extends ConsumerWidget {
                     : null,
             child: Row(
               children: [
-                // Status indicator dot
                 Container(
                   width: 12,
                   height: 12,
@@ -166,7 +159,6 @@ class _PipelineView extends ConsumerWidget {
                 ),
                 const SizedBox(width: DeskflowSpacing.md),
 
-                // Status name
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,7 +187,6 @@ class _PipelineView extends ConsumerWidget {
                   ),
                 ),
 
-                // Indicators
                 if (isPast)
                   const Icon(Icons.check_circle_rounded,
                       size: 20,
@@ -218,7 +209,6 @@ class _PipelineView extends ConsumerWidget {
   }
 
   Future<void> _changeStatus(WidgetRef ref, OrderStatus newStatus) async {
-    // Find current status name for audit
     final currentStatus = pipeline.firstWhere(
       (s) => s.id == currentStatusId,
       orElse: () => pipeline.first,

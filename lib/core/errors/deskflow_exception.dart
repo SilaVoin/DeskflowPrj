@@ -1,70 +1,22 @@
-/// Base exception for all Deskflow domain errors.
-///
-/// Provides user-friendly Russian messages and machine-readable codes.
 class DeskflowException implements Exception {
   final String message;
   final String? code;
 
   const DeskflowException(this.message, {this.code});
 
-  // ── Auth ──────────────────────────────────────────────
-  static const invalidCredentials = DeskflowException(
-    'Неверный email или пароль',
-    code: 'INVALID_CREDENTIALS',
-  );
-
-  static const emailNotConfirmed = DeskflowException(
-    'Email не подтверждён',
-    code: 'EMAIL_NOT_CONFIRMED',
-  );
-
-  static const userAlreadyRegistered = DeskflowException(
-    'Пользователь уже зарегистрирован',
-    code: 'USER_ALREADY_REGISTERED',
-  );
-
-  static const weakPassword = DeskflowException(
-    'Пароль слишком простой (минимум 8 символов)',
-    code: 'WEAK_PASSWORD',
-  );
-
-  // ── Org ───────────────────────────────────────────────
-  static const orgNotFound = DeskflowException(
-    'Организация не найдена',
-    code: 'ORG_NOT_FOUND',
-  );
-
-  static const invalidInviteCode = DeskflowException(
-    'Неверный код приглашения',
-    code: 'INVALID_INVITE_CODE',
-  );
-
-  static const alreadyMember = DeskflowException(
-    'Вы уже являетесь участником этой организации',
-    code: 'ALREADY_MEMBER',
-  );
-
-  // ── Orders ────────────────────────────────────────────
   static const orderAlreadyFinal = DeskflowException(
-    'Заказ уже в финальном статусе',
+    '\u0417\u0430\u043a\u0430\u0437 \u0443\u0436\u0435 \u0432 \u0444\u0438\u043d\u0430\u043b\u044c\u043d\u043e\u043c \u0441\u0442\u0430\u0442\u0443\u0441\u0435',
     code: 'ORDER_FINAL',
   );
 
-  // ── Access ────────────────────────────────────────────
   static const insufficientPermissions = DeskflowException(
-    'Недостаточно прав для этого действия',
+    '\u041d\u0435\u0434\u043e\u0441\u0442\u0430\u0442\u043e\u0447\u043d\u043e \u043f\u0440\u0430\u0432 \u0434\u043b\u044f \u044d\u0442\u043e\u0433\u043e \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f',
     code: 'INSUFFICIENT_PERMISSIONS',
   );
 
-  // ── Network ───────────────────────────────────────────
-  static const noConnection = DeskflowException(
-    'Нет подключения к интернету',
-    code: 'NO_CONNECTION',
-  );
-
-  static const serverError = DeskflowException(
-    'Ошибка сервера. Попробуйте позже',
-    code: 'SERVER_ERROR',
+  static const orgNotFound = DeskflowException(
+    '\u041e\u0440\u0433\u0430\u043d\u0438\u0437\u0430\u0446\u0438\u044f \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u0430',
+    code: 'ORG_NOT_FOUND',
   );
 
   @override

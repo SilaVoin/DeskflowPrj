@@ -15,7 +15,6 @@ part 'chat_notifier.g.dart';
 final _log = AppLogger.getLogger('ChatNotifier');
 const _uuid = Uuid();
 
-/// Manages chat state for a specific order — handles realtime, sending, etc.
 @riverpod
 class ChatNotifier extends _$ChatNotifier {
   RealtimeChannel? _channel;
@@ -24,31 +23,24 @@ class ChatNotifier extends _$ChatNotifier {
   String? _typingUserName;
   void Function(String?)? _onTypingChanged;
 
-  /// Whether there are more older messages to load.
   bool _hasMore = true;
 
-  /// Whether older messages are currently being fetched.
   bool _isLoadingOlder = false;
 
-  /// Whether there are more older messages available.
   bool get hasMore => _hasMore;
 
-  /// Whether a pagination fetch is in progress.
   bool get isLoadingOlder => _isLoadingOlder;
 
   @override
   Future<List<ChatMessage>> build(String orderId) async {
     _log.d('build: orderId=$orderId');
 
-    // Fetch initial messages
     final messages = await ref
         .watch(chatRepositoryProvider)
         .getMessages(orderId: orderId);
 
-    // Subscribe to realtime
     _subscribeRealtime();
 
-    // Clean up on dispose
     ref.onDispose(() {
       _log.d('dispose: unsubscribing from realtime');
       if (_channel != null) {
@@ -63,15 +55,10 @@ class ChatNotifier extends _$ChatNotifier {
     return messages;
   }
 
-  /// Register a callback for typing indicator changes.
   void setOnTypingChanged(void Function(String?) callback) {
     _onTypingChanged = callback;
   }
 
-  /// Load older messages (pagination).
-  ///
-  /// Fetches messages older than the oldest currently loaded message
-  /// and prepends them to the state. Returns true if more messages exist.
   Future<bool> loadOlderMessages() async {
     if (!_hasMore || _isLoadingOlder) return _hasMore;
 
@@ -103,7 +90,6 @@ class ChatNotifier extends _$ChatNotifier {
     }
   }
 
-  /// Subscribe to Supabase Realtime for new messages.
   void _subscribeRealtime() {
     final repo = ref.read(chatRepositoryProvider);
     final currentUserId = ref.read(currentUserProvider)?.id;
@@ -114,35 +100,28 @@ class ChatNotifier extends _$ChatNotifier {
         _log.d('_subscribeRealtime: new message id=${message.id}, '
             'sender=${message.senderId}');
 
-        // Skip if this is our own message (we already added it optimistically)
         if (message.senderId == currentUserId) {
-          // Update the optimistic message with the real one
           _updateOptimisticMessage(message);
           return;
         }
 
-        // Add the new message from another user
         state = state.whenData((messages) {
-          // Avoid duplicates
           if (messages.any((m) => m.id == message.id)) return messages;
           return [...messages, message];
         });
       },
     );
 
-    // Listen for typing broadcasts
     if (_channel != null) {
       repo.onTypingIndicator(
         channel: _channel!,
         onTyping: (userId, userName) {
-          // Ignore own typing
           if (userId == currentUserId) return;
 
           _log.d('typing indicator from: $userName');
           _typingUserName = userName.isNotEmpty ? userName : 'Кто-то';
           _onTypingChanged?.call(_typingUserName);
 
-          // Clear typing after 3 seconds of inactivity
           _typingDisplayTimer?.cancel();
           _typingDisplayTimer = Timer(const Duration(seconds: 3), () {
             _typingUserName = null;
@@ -153,7 +132,6 @@ class ChatNotifier extends _$ChatNotifier {
     }
   }
 
-  /// Update an optimistic message with the real server response.
   void _updateOptimisticMessage(ChatMessage realMessage) {
     state = state.whenData((messages) {
       final idx = messages.indexWhere(
@@ -164,13 +142,11 @@ class ChatNotifier extends _$ChatNotifier {
         updated[idx] = realMessage;
         return updated;
       }
-      // If no optimistic match found, check if already exists
       if (messages.any((m) => m.id == realMessage.id)) return messages;
       return [...messages, realMessage];
     });
   }
 
-  /// Send a text message with optimistic UI.
   Future<void> sendMessage(String text) async {
     final currentUser = ref.read(currentUserProvider);
     if (currentUser == null) {
@@ -183,7 +159,6 @@ class ChatNotifier extends _$ChatNotifier {
 
     _log.d('sendMessage: text="${trimmed.substring(0, trimmed.length > 30 ? 30 : trimmed.length)}..."');
 
-    // Create optimistic message
     final optimistic = ChatMessage(
       id: 'temp-${_uuid.v4()}',
       orderId: orderId,
@@ -194,7 +169,6 @@ class ChatNotifier extends _$ChatNotifier {
       createdAt: DateTime.now(),
     );
 
-    // Add to state immediately
     state = state.whenData((messages) => [...messages, optimistic]);
 
     try {
@@ -204,7 +178,6 @@ class ChatNotifier extends _$ChatNotifier {
             text: trimmed,
           );
 
-      // Replace optimistic with real message
       state = state.whenData((messages) {
         final updated = List<ChatMessage>.from(messages);
         final idx = updated.indexWhere((m) => m.id == optimistic.id);
@@ -216,11 +189,9 @@ class ChatNotifier extends _$ChatNotifier {
 
       _log.d('sendMessage: sent successfully id=${sent.id}');
 
-      // [FIX] Invalidate message count so order detail screen refreshes
       ref.invalidate(chatMessageCountProvider(orderId));
     } catch (e) {
       _log.e('sendMessage: error: $e');
-      // Mark optimistic message as error
       state = state.whenData((messages) {
         return messages.map((m) {
           if (m.id == optimistic.id) {
@@ -232,7 +203,6 @@ class ChatNotifier extends _$ChatNotifier {
     }
   }
 
-  /// Send a message with file attachments.
   Future<void> sendMessageWithAttachments({
     String? text,
     required List<XFile> files,
@@ -242,7 +212,6 @@ class ChatNotifier extends _$ChatNotifier {
 
     _log.d('sendMessageWithAttachments: files=${files.length}, text=$text');
 
-    // Create optimistic message
     final optimistic = ChatMessage(
       id: 'temp-${_uuid.v4()}',
       orderId: orderId,
@@ -264,16 +233,10 @@ class ChatNotifier extends _$ChatNotifier {
                 files: files,
               );
 
-      // [FIX] Race condition: Realtime INSERT event fires BEFORE attachments
-      // are uploaded, so _updateOptimisticMessage replaces the optimistic msg
-      // with a version that has EMPTY attachments. By the time we get `sent`
-      // (with full attachments), the optimistic temp ID no longer exists.
-      // Fix: also search by the real message ID as fallback.
       state = state.whenData((messages) {
         final updated = List<ChatMessage>.from(messages);
         var idx = updated.indexWhere((m) => m.id == optimistic.id);
         if (idx < 0) {
-          // Optimistic was already replaced by realtime — find by real ID
           idx = updated.indexWhere((m) => m.id == sent.id);
           _log.d('[FIX] sendMessageWithAttachments: optimistic not found, '
               'fallback to real id, idx=$idx');
@@ -286,7 +249,6 @@ class ChatNotifier extends _$ChatNotifier {
 
       _log.d('sendMessageWithAttachments: sent successfully id=${sent.id}');
 
-      // [FIX] Invalidate message count so order detail screen refreshes
       ref.invalidate(chatMessageCountProvider(orderId));
     } catch (e) {
       _log.e('sendMessageWithAttachments: error: $e');
@@ -301,7 +263,6 @@ class ChatNotifier extends _$ChatNotifier {
     }
   }
 
-  /// Retry sending a failed message.
   Future<void> retryMessage(String messageId) async {
     _log.d('retryMessage: id=$messageId');
     final currentMessages = state.valueOrNull;
@@ -312,21 +273,17 @@ class ChatNotifier extends _$ChatNotifier {
       orElse: () => throw StateError('Message not found'),
     );
 
-    // Remove the failed message
     state = state.whenData(
       (messages) => messages.where((m) => m.id != messageId).toList(),
     );
 
-    // Re-send
     if (failedMsg.text != null) {
       await sendMessage(failedMsg.text!);
     }
   }
 
-  /// Current typing user name (null if nobody is typing).
   String? get typingUserName => _typingUserName;
 
-  /// Notify that current user is typing.
   void notifyTyping() {
     if (_channel == null) return;
     final currentUser = ref.read(currentUserProvider);

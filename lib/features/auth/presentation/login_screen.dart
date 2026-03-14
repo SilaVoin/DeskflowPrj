@@ -14,7 +14,6 @@ import 'package:deskflow/features/profile/domain/account_history_providers.dart'
 
 final _log = AppLogger.getLogger('LoginScreen');
 
-/// Login screen — email/password authentication.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -31,12 +30,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    // Read pending email set by account switcher (survives signOut redirect)
     final pendingEmail = ref.read(pendingLoginEmailProvider);
     _emailController = TextEditingController(text: pendingEmail ?? '');
     if (pendingEmail != null && pendingEmail.isNotEmpty) {
       _log.i('initState: pre-filled email=$pendingEmail');
-      // Clear it after build to avoid Riverpod "modify during build" error
       Future(() {
         ref.read(pendingLoginEmailProvider.notifier).state = null;
       });
@@ -53,7 +50,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // [FIX] Clear stale error SnackBars before new login attempt
     ScaffoldMessenger.of(context).clearSnackBars();
 
     final email = _emailController.text.trim();
@@ -64,7 +60,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     if (!success || !mounted) return;
 
-      // Save email to recent accounts history
       _log.i('_handleLogin: saving email=$email to account history');
       try {
         await ref
@@ -74,7 +69,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         _log.d('_handleLogin: could not save email to history (non-critical): $e');
       }
 
-      // [FIX] Save refresh token for seamless account switching
       try {
         final refreshToken = ref.read(authRepositoryProvider).currentSession?.refreshToken;
         if (refreshToken != null) {
@@ -87,15 +81,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         _log.d('[FIX] _handleLogin: could not save refresh token (non-critical): $e');
       }
 
-      // [FIX] Reset adding-account flag so router resumes normal redirection
       ref.read(addingAccountProvider.notifier).state = false;
-      // GoRouter redirect will handle navigation
       if (!mounted) return;
       context.go('/');
   }
 
   Future<void> _handleGoogleSignIn() async {
-    // [FIX] Clear stale error SnackBars before new login attempt
     ScaffoldMessenger.of(context).clearSnackBars();
     final success =
         await ref.read(authNotifierProvider.notifier).signInWithGoogle();
@@ -107,7 +98,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handleAppleSignIn() async {
-    // [FIX] Clear stale error SnackBars before new login attempt
     ScaffoldMessenger.of(context).clearSnackBars();
     final success =
         await ref.read(authNotifierProvider.notifier).signInWithApple();
@@ -118,7 +108,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     context.go('/');
   }
 
-  /// [FIX] Save email + refresh token after OAuth login for account switching.
   Future<void> _saveSessionAfterOAuth() async {
     try {
       final user = ref.read(authRepositoryProvider).currentUser;
@@ -142,7 +131,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final authState = ref.watch(authNotifierProvider);
     final isLoading = authState.isLoading;
 
-    // Listen for errors and show snackbar
     ref.listen<AsyncValue<void>>(authNotifierProvider, (_, next) {
       if (next.hasError) {
         final error = next.error;
@@ -169,7 +157,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Logo
                 Container(
                   width: 64,
                   height: 64,
@@ -191,7 +178,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const Text('Войти в аккаунт', style: DeskflowTypography.h2),
                 const SizedBox(height: DeskflowSpacing.xxl),
 
-                // Form card
                 GlassCard(
                   child: Column(
                     children: [
@@ -236,7 +222,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 const SizedBox(height: DeskflowSpacing.xl),
 
-                // Divider "или"
                 Row(
                   children: [
                     const Expanded(
@@ -259,7 +244,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 const SizedBox(height: DeskflowSpacing.xl),
 
-                // OAuth buttons
                 PillButton.secondary(
                   label: 'Войти через Google',
                   icon: Icons.g_mobiledata_rounded,
@@ -276,7 +260,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 const SizedBox(height: DeskflowSpacing.xxl),
 
-                // Links
                 TextButton(
                   onPressed: () => context.push('/auth/register'),
                   child: Text(

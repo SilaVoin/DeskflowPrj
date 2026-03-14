@@ -11,7 +11,6 @@ import 'package:deskflow/features/orders/domain/order.dart';
 import 'package:deskflow/features/orders/domain/order_providers.dart';
 import 'package:deskflow/features/orders/domain/order_status.dart';
 
-// ─────────────────────── Helpers ─────────────────────────────────────
 
 const _testOrderId = 'ord-test-1';
 const _testUserId = 'user-test-1';
@@ -65,7 +64,6 @@ ChatMessage _msg({
       systemAction: systemAction,
     );
 
-/// Fake notifier that resolves immediately with predefined messages.
 class FakeChatNotifier extends ChatNotifier {
   final List<ChatMessage> _messages;
   FakeChatNotifier(this._messages);
@@ -83,7 +81,6 @@ class FakeChatNotifier extends ChatNotifier {
   Future<void> sendMessage(String text) async {}
 }
 
-/// Builds the screen wrapped in the necessary providers and scaffold.
 Widget _buildSubject({
   required List<ChatMessage> messages,
   Order? order,
@@ -93,8 +90,6 @@ Widget _buildSubject({
       currentUserProvider.overrideWith((ref) => _fakeUser()),
       orderDetailProvider(_testOrderId)
           .overrideWith((ref) async => order ?? _fakeOrder()),
-      // Override the entire family so the notifier for our orderId
-      // is replaced with the fake.
       chatNotifierProvider(_testOrderId)
           .overrideWith(() => FakeChatNotifier(messages)),
     ],
@@ -104,7 +99,6 @@ Widget _buildSubject({
   );
 }
 
-// ─────────────────────── Tests ───────────────────────────────────────
 
 void main() {
   group('OrderChatScreen', () {
@@ -112,7 +106,6 @@ void main() {
       await tester.pumpWidget(_buildSubject(messages: []));
       await tester.pumpAndSettle();
 
-      // The empty chat state should show a prompt
       expect(find.textContaining('Начните'), findsOneWidget);
     });
 
@@ -154,7 +147,6 @@ void main() {
       await tester.pumpWidget(_buildSubject(messages: []));
       await tester.pumpAndSettle();
 
-      // Order #042
       expect(find.text('#042'), findsOneWidget);
     });
 
@@ -169,7 +161,6 @@ void main() {
       await tester.pumpWidget(_buildSubject(messages: []));
       await tester.pumpAndSettle();
 
-      // Find the text input for composing messages
       expect(find.byType(TextField), findsOneWidget);
     });
 

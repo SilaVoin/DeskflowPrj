@@ -67,6 +67,7 @@ flutter:
 
   assets:
     - assets/env.json
+    - assets/backgrounds/
   #         style: italic
   #   - family: Trajan Pro
   #     fonts:

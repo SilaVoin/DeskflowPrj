@@ -6,17 +6,12 @@ import 'package:permission_handler/permission_handler.dart';
 
 import 'package:deskflow/core/theme/deskflow_theme.dart';
 import 'package:deskflow/core/utils/app_logger.dart';
+import 'package:deskflow/core/widgets/deskflow_shell_background.dart';
 import 'package:deskflow/core/widgets/floating_island_nav.dart';
 import 'package:deskflow/features/notifications/domain/notification_providers.dart';
 
 final _log = AppLogger.getLogger('MainShellScreen');
 
-/// Main app shell with floating island bottom navigation.
-///
-/// Wraps the 4 main tabs (Orders, Search, Customers, Profile) using
-/// [StatefulShellRoute.indexedStack] from GoRouter.
-///
-/// On first display, requests notification permission (Android 13+).
 class MainShellScreen extends ConsumerStatefulWidget {
   const MainShellScreen({
     super.key,
@@ -37,7 +32,6 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> {
   }
 
   Future<void> _requestNotificationPermission() async {
-    // Only request on Android/iOS — web doesn't support this
     if (kIsWeb) return;
 
     try {
@@ -59,7 +53,13 @@ class _MainShellScreenState extends ConsumerState<MainShellScreen> {
 
     return Scaffold(
       backgroundColor: DeskflowColors.background,
-      body: widget.navigationShell,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          const DeskflowShellBackground(),
+          widget.navigationShell,
+        ],
+      ),
       extendBody: true,
       bottomNavigationBar: FloatingIslandNav(
         currentIndex: widget.navigationShell.currentIndex,

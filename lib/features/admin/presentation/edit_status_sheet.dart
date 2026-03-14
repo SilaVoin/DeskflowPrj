@@ -9,7 +9,6 @@ import 'package:deskflow/features/admin/domain/admin_providers.dart';
 import 'package:deskflow/features/orders/domain/order_status.dart';
 import 'package:deskflow/features/org/domain/org_providers.dart';
 
-/// Predefined color palette for statuses.
 const _statusColors = [
   '#6B7280', // gray
   '#3B82F6', // blue
@@ -23,7 +22,6 @@ const _statusColors = [
   '#06B6D4', // cyan
 ];
 
-/// Bottom sheet for creating or editing an order status.
 class EditStatusSheet extends HookConsumerWidget {
   final OrderStatus? status;
   final VoidCallback onSaved;
@@ -66,7 +64,6 @@ class EditStatusSheet extends HookConsumerWidget {
             isFinal: isFinal.value,
           );
         } else {
-          // Get next sort order
           final pipeline =
               await ref.read(adminPipelineProvider.future);
           await repo.createStatus(
@@ -111,7 +108,6 @@ class EditStatusSheet extends HookConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Handle
             Center(
               child: Container(
                 width: 40,
@@ -124,14 +120,12 @@ class EditStatusSheet extends HookConsumerWidget {
             ),
             const SizedBox(height: DeskflowSpacing.lg),
 
-            // Title
             Text(
               isEditing ? 'Редактировать статус' : 'Новый статус',
               style: DeskflowTypography.h2,
             ),
             const SizedBox(height: DeskflowSpacing.xl),
 
-            // Name
             GlassTextField(
               label: 'Название',
               hint: 'Например: В работе',
@@ -145,7 +139,6 @@ class EditStatusSheet extends HookConsumerWidget {
             ),
             const SizedBox(height: DeskflowSpacing.xl),
 
-            // Color picker
             Text('Цвет', style: DeskflowTypography.caption),
             const SizedBox(height: DeskflowSpacing.sm),
             Wrap(
@@ -186,7 +179,6 @@ class EditStatusSheet extends HookConsumerWidget {
             ),
             const SizedBox(height: DeskflowSpacing.xl),
 
-            // Toggles
             SwitchListTile(
               title: const Text('По умолчанию',
                   style: DeskflowTypography.body),
@@ -197,7 +189,6 @@ class EditStatusSheet extends HookConsumerWidget {
               value: isDefault.value,
               onChanged: (v) {
                 isDefault.value = v;
-                // Default and Final are mutually exclusive
                 if (v) isFinal.value = false;
               },
               activeThumbColor: DeskflowColors.primarySolid,
@@ -213,7 +204,6 @@ class EditStatusSheet extends HookConsumerWidget {
               value: isFinal.value,
               onChanged: (v) {
                 isFinal.value = v;
-                // Default and Final are mutually exclusive
                 if (v) isDefault.value = false;
               },
               activeThumbColor: DeskflowColors.successSolid,
@@ -221,7 +211,6 @@ class EditStatusSheet extends HookConsumerWidget {
             ),
             const SizedBox(height: DeskflowSpacing.xl),
 
-            // Save
             PillButton(
               label: 'Сохранить',
               onPressed: save,

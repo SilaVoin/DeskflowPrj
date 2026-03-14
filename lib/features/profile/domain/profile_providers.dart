@@ -14,14 +14,11 @@ part 'profile_providers.g.dart';
 
 final _log = AppLogger.getLogger('ProfileProviders');
 
-/// Profile repository — keepAlive singleton.
 @Riverpod(keepAlive: true)
 ProfileRepository profileRepository(Ref ref) {
   return ProfileRepository(ref.watch(supabaseClientProvider));
 }
 
-/// Notification settings for current user + org.
-/// Returns defaults if no saved preferences exist.
 @riverpod
 class NotificationSettingsNotifier extends _$NotificationSettingsNotifier {
   @override
@@ -56,7 +53,6 @@ class NotificationSettingsNotifier extends _$NotificationSettingsNotifier {
     );
   }
 
-  /// Update a single toggle and persist to Supabase.
   Future<void> updateSetting({
     bool? notifyNewOrders,
     bool? notifyStatusChanges,
@@ -73,7 +69,6 @@ class NotificationSettingsNotifier extends _$NotificationSettingsNotifier {
       notifySound: notifySound,
     );
 
-    // Optimistic update
     state = AsyncData(updated);
 
     _log.d('updateSetting: saving to Supabase');
@@ -84,16 +79,11 @@ class NotificationSettingsNotifier extends _$NotificationSettingsNotifier {
       _log.i('updateSetting: saved successfully');
     } catch (e, st) {
       _log.e('updateSetting: failed, reverting', error: e, stackTrace: st);
-      // Revert on error
       state = AsyncData(current);
     }
   }
 }
 
-/// User profile data from the `profiles` table.
-///
-/// Holds full_name and avatar_url. Used by ProfileScreen
-/// to display the profile photo and name.
 class UserProfileData {
   final String? fullName;
   final String? avatarUrl;
@@ -101,10 +91,6 @@ class UserProfileData {
   const UserProfileData({this.fullName, this.avatarUrl});
 }
 
-/// Notifier for user profile data (name + avatar).
-///
-/// Loads data from `profiles` table, provides methods to
-/// update avatar and display name.
 @riverpod
 class UserProfileNotifier extends _$UserProfileNotifier {
   @override
@@ -136,10 +122,6 @@ class UserProfileNotifier extends _$UserProfileNotifier {
     return profile;
   }
 
-  /// Upload a new avatar image and update the profile.
-  ///
-  /// [bytes] — raw image bytes from ImagePicker.
-  /// [fileExt] — file extension (jpg, png, webp).
   Future<void> updateAvatar(Uint8List bytes, String fileExt) async {
     final user = ref.read(currentUserProvider);
     if (user == null) {
@@ -151,7 +133,6 @@ class UserProfileNotifier extends _$UserProfileNotifier {
     final repo = ref.read(profileRepositoryProvider);
 
     try {
-      // 1. Upload to Storage
       _log.d('updateAvatar: uploading to Storage...');
       final publicUrl = await repo.uploadAvatar(
         userId: user.id,
@@ -160,12 +141,10 @@ class UserProfileNotifier extends _$UserProfileNotifier {
       );
       _log.d('updateAvatar: uploaded, publicUrl=$publicUrl');
 
-      // 2. Update profiles table
       _log.d('updateAvatar: updating profiles table...');
       await repo.updateProfile(userId: user.id, avatarUrl: publicUrl);
       _log.i('updateAvatar: profile updated successfully');
 
-      // 3. Update local state
       final current = state.valueOrNull ?? const UserProfileData();
       state = AsyncData(UserProfileData(
         fullName: current.fullName,
@@ -177,7 +156,6 @@ class UserProfileNotifier extends _$UserProfileNotifier {
     }
   }
 
-  /// Update the display name in profiles table.
   Future<void> updateDisplayName(String name) async {
     final user = ref.read(currentUserProvider);
     if (user == null) {
@@ -192,7 +170,6 @@ class UserProfileNotifier extends _$UserProfileNotifier {
       await repo.updateProfile(userId: user.id, fullName: name);
       _log.i('updateDisplayName: updated successfully');
 
-      // Update local state
       final current = state.valueOrNull ?? const UserProfileData();
       state = AsyncData(UserProfileData(
         fullName: name,

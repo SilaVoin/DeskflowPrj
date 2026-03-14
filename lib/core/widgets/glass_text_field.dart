@@ -2,17 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:deskflow/core/theme/deskflow_theme.dart';
 
-/// Glass-styled text field with floating label, validation,
-/// and error states per the Liquid Glass design system.
-///
-/// ```dart
-/// GlassTextField(
-///   label: 'Email',
-///   hint: 'example@mail.com',
-///   controller: _emailController,
-///   validator: (v) => v!.isEmpty ? 'Required' : null,
-/// )
-/// ```
 class GlassTextField extends StatelessWidget {
   const GlassTextField({
     super.key,

@@ -1,4 +1,3 @@
-/// Customer domain model.
 class Customer {
   final String id;
   final String organizationId;
@@ -24,13 +23,13 @@ class Customer {
     this.totalSpent = 0,
   });
 
-  /// First letters of name parts for avatar display.
   String get initials {
-    final parts = name.trim().split(RegExp(r'\s+'));
+    if (name.isEmpty) return '?';
+    final parts = name.split(' ');
     if (parts.length >= 2) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
-    return name.isNotEmpty ? name[0].toUpperCase() : '?';
+    return parts[0][0].toUpperCase();
   }
 
   factory Customer.fromJson(Map<String, dynamic> json) {
@@ -43,7 +42,7 @@ class Customer {
       address: json['address'] as String?,
       notes: json['notes'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
-      orderCount: (json['order_count'] as num?)?.toInt() ?? 0,
+      orderCount: json['order_count'] as int? ?? 0,
       totalSpent: (json['total_spent'] as num?)?.toDouble() ?? 0,
     );
   }

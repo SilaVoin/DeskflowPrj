@@ -15,12 +15,6 @@ import 'package:deskflow/features/profile/domain/profile_providers.dart';
 
 final _log = AppLogger.getLogger('ProfileScreen');
 
-/// Profile screen — Tab 3.
-///
-/// Shows real user info with profile photo, org settings (owner-gated),
-/// admin panel access, and logout.
-/// Reads profile data from `profiles` table via UserProfileNotifier,
-/// auth data from Supabase auth + org providers.
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
@@ -109,24 +103,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
-  /// Navigate to login/register for adding another account.
-  ///
-  /// IMPORTANT: Does NOT call signOut() — because signOut(scope: local)
-  /// revokes the current refresh token on the Supabase server, making
-  /// it impossible to switch back to this account later.
-  /// Instead, sets [addingAccountProvider] flag so the router allows
-  /// auth routes while still logged in. The new signInWithPassword()
-  /// call will replace the current session atomically.
   Future<void> _signOutAndNavigate(String route) async {
     _log.d('_signOutAndNavigate: route=$route');
     try {
-      // Save current session's refresh token AND email to recent list
-      // (it stays valid on the server because we don't call signOut)
       final currentSession = ref.read(authRepositoryProvider).currentSession;
       final currentEmail = ref.read(authRepositoryProvider).currentUser?.email;
       if (currentEmail != null) {
         _log.d('[FIX] _signOutAndNavigate: saving email + token for $currentEmail');
-        // Ensure current email is in recent list so it appears in account switcher
         await ref.read(recentEmailsNotifierProvider.notifier).addEmail(currentEmail);
         if (currentSession?.refreshToken != null) {
           await ref.read(recentEmailsNotifierProvider.notifier).saveRefreshToken(
@@ -136,7 +119,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         }
       }
 
-      // Set flag so router allows auth routes while logged in
       ref.read(addingAccountProvider.notifier).state = true;
       ref.read(currentOrgIdProvider.notifier).clear();
 
@@ -154,8 +136,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
-  /// Genuine sign out — revokes the session and navigates to login.
-  /// Used by the "Выйти" button (not for account switching).
   Future<void> _realSignOut() async {
     _log.d('_realSignOut: performing genuine sign out');
     try {
@@ -217,14 +197,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final recentEmails = ref.read(recentEmailsNotifierProvider);
     _log.d('_showAccountSwitcher: recentEmails=$recentEmails');
 
-    // Filter out the current user's email — no point switching to yourself
     final currentEmail = ref.read(authRepositoryProvider).currentUser?.email?.toLowerCase();
     final otherEmails = recentEmails
         .where((e) => e.toLowerCase() != currentEmail)
         .toList();
 
     if (otherEmails.isEmpty) {
-      // [FIX] Don't sign out immediately — show bottom sheet with "Add account" option
       _log.d('[FIX] _showAccountSwitcher: no other emails, showing add-account sheet');
       showModalBottomSheet(
         context: context,
@@ -371,23 +349,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  /// [FIX] Try to restore another account's session via stored refresh token.
-  /// Falls back to login page if the token is missing or expired.
-  ///
-  /// Captures all provider dependencies BEFORE signOut to avoid using
-  /// a disposed WidgetRef after the GoRouter redirect removes this widget.
-  /// Uses [isSwitchingAccountProvider] to suppress router redirects
-  /// during the signOut→restoreSession gap.
-  /// Switch to another account using its stored refresh token.
-  ///
-  /// IMPORTANT: Does NOT call signOut() — because signOut(scope: local)
-  /// revokes the current refresh token on the Supabase server.
-  /// Instead, calls setSession(targetRT) directly, which atomically
-  /// replaces the current session without revoking any tokens.
   Future<void> _switchToAccount(String email) async {
     _log.d('[FIX] _switchToAccount: email=$email');
 
-    // 1. Check for stored refresh token
     final refreshToken = ref
         .read(recentEmailsNotifierProvider.notifier)
         .getRefreshToken(email);
@@ -399,16 +363,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       return;
     }
 
-    // Capture dependencies BEFORE any state changes
     final authRepo = ref.read(authRepositoryProvider);
     final emailsNotifier = ref.read(recentEmailsNotifierProvider.notifier);
 
-    // Suppress router redirects during the switch
     ref.read(isSwitchingAccountProvider.notifier).state = true;
     _log.d('[FIX] _switchToAccount: switching flag ON');
 
     try {
-      // 2. Save current session's refresh token (NO signOut = token stays valid)
       final currentSession = authRepo.currentSession;
       final currentEmail = authRepo.currentUser?.email;
       if (currentSession?.refreshToken != null && currentEmail != null) {
@@ -419,27 +380,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         );
       }
 
-      // 3. Clear org state for the new user
       ref.read(currentOrgIdProvider.notifier).clear();
 
-      // 4. Restore target session directly — NO signOut needed!
-      // setSession replaces the current session atomically.
-      // The old session's refresh token is NOT revoked on the server.
       _log.d('[FIX] _switchToAccount: restoring target session (no signOut)');
       final response = await authRepo.restoreSession(refreshToken);
       final newRefreshToken = response.session?.refreshToken;
       _log.i('[FIX] _switchToAccount: session restored for $email');
 
-      // Save the rotated refresh token
       if (newRefreshToken != null) {
         await emailsNotifier.saveRefreshToken(email, newRefreshToken);
       }
 
-      // Clear switching flag BEFORE navigation so redirect can work
       ref.read(isSwitchingAccountProvider.notifier).state = false;
       _log.d('[FIX] _switchToAccount: switching flag OFF, navigating to splash');
 
-      // Navigate to splash for full flow: splash → org-select → orders
       if (mounted) {
         context.go('/');
       }
@@ -448,8 +402,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _log.e('[FIX] _switchToAccount: restore failed, trying refreshSession fallback',
           error: e, stackTrace: st);
 
-      // [FIX] Retry: if setSession failed (token revoked/rotated),
-      // try refreshSession as fallback before giving up.
       try {
         final retryResponse = await authRepo.refreshCurrentSession();
         final retryToken = retryResponse.session?.refreshToken;
@@ -466,7 +418,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             error: retryError);
       }
 
-      // Both attempts failed — fall back to login
       try {
         ref.read(pendingLoginEmailProvider.notifier).state = email;
         ref.read(isSwitchingAccountProvider.notifier).state = false;
@@ -500,7 +451,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
       _log.d('_pickAndUploadAvatar: picked file=${picked.name}, path=${picked.path}');
 
-      // Determine file extension
       final ext = picked.name.split('.').last.toLowerCase();
       final allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
       final fileExt = allowedExts.contains(ext) ? ext : 'jpg';
@@ -546,11 +496,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final isOwnerOrAdmin = ref.watch(isOwnerOrAdminProvider);
     final currentRole = ref.watch(currentUserRoleProvider).valueOrNull;
 
-    // ── Profile data from profiles table ──
     final profileAsync = ref.watch(userProfileNotifierProvider);
     final profileData = profileAsync.valueOrNull;
 
-    // Use profile name from DB; fall back to auth metadata
     final email = user?.email ?? '';
     final meta = user?.userMetadata;
     final metaName =
@@ -563,16 +511,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     _log.d('build: displayName=$displayName, avatarUrl=${avatarUrl != null ? 'present' : 'null'}');
 
-    // Find current org name
     final currentOrg = orgs.valueOrNull
         ?.cast<dynamic>()
         .where((o) => o.id == orgId)
         .firstOrNull;
     final orgName = currentOrg?.name ?? 'Организация';
 
-    return Scaffold(
-      backgroundColor: DeskflowColors.background,
-      body: SafeArea(
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
@@ -583,7 +530,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           child: Column(
             children: [
-              // ── Avatar + Info ──
               GestureDetector(
                 onTap: _isUploadingAvatar ? null : _pickAndUploadAvatar,
                 child: Stack(
@@ -638,7 +584,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   ),
                       ),
                     ),
-                    // Camera badge
                     Positioned(
                       right: 0,
                       bottom: 0,
@@ -664,7 +609,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
               ),
               const SizedBox(height: DeskflowSpacing.md),
-              // ── Display name from profiles table (tappable to edit) ──
               GestureDetector(
                 onTap: () => _showEditNameDialog(displayName),
                 child: Row(
@@ -706,7 +650,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
               const SizedBox(height: DeskflowSpacing.xxl),
 
-              // ── Organization section ──
               GlassCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -738,7 +681,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
               const SizedBox(height: DeskflowSpacing.lg),
 
-              // ── Admin section (Owner or Admin) ──
               if (isOwnerOrAdmin) ...[
                 GlassCard(
                   child: Column(
@@ -770,7 +712,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 const SizedBox(height: DeskflowSpacing.lg),
               ],
 
-              // ── Settings section ──
               GlassCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -796,7 +737,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
               const SizedBox(height: DeskflowSpacing.lg),
 
-              // ── Account section ──
               GlassCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

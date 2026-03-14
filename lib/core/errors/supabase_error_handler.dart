@@ -5,7 +5,6 @@ import 'package:deskflow/core/utils/app_logger.dart';
 
 final _log = AppLogger.getLogger('SupabaseErrorHandler');
 
-/// Wraps a Supabase call, mapping exceptions to [DeskflowException].
 Future<T> supabaseGuard<T>(Future<T> Function() fn) async {
   try {
     return await fn();
@@ -28,7 +27,6 @@ Future<T> supabaseGuard<T>(Future<T> Function() fn) async {
       code: 'STORAGE_ERROR',
     );
   } on DeskflowException {
-    // [FIX] Already-mapped domain exceptions — pass through as-is
     rethrow;
   } catch (e) {
     _log.e('Unexpected error: $e');

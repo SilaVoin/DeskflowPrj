@@ -13,15 +13,12 @@ const _uuid = Uuid();
 
 final _log = AppLogger.getLogger('ChatRepository');
 
-/// Handles all chat-related database and realtime operations.
 class ChatRepository {
   final SupabaseClient _client;
 
   ChatRepository(this._client);
 
-  // ──────────────────────────── Messages ─────────────────────────────
 
-  /// Fetch chat messages for an order (newest first, paginated).
   Future<List<ChatMessage>> getMessages({
     required String orderId,
     int limit = 50,
@@ -45,7 +42,6 @@ class ChatRepository {
     });
   }
 
-  /// Fetch latest N messages (for preview in order detail).
   Future<List<ChatMessage>> getLatestMessages({
     required String orderId,
     int count = 3,
@@ -69,9 +65,6 @@ class ChatRepository {
     });
   }
 
-  /// Fetch messages older than [before] for pagination.
-  ///
-  /// Returns messages in ascending order (oldest first).
   Future<List<ChatMessage>> getOlderMessages({
     required String orderId,
     required DateTime before,
@@ -99,7 +92,6 @@ class ChatRepository {
     });
   }
 
-  /// Get total message count for an order.
   Future<int> getMessageCount(String orderId) async {
     _log.d('getMessageCount: orderId=$orderId');
     return supabaseGuard(() async {
@@ -113,7 +105,6 @@ class ChatRepository {
     });
   }
 
-  /// Send a text message.
   Future<ChatMessage> sendMessage({
     required String orderId,
     required String senderId,
@@ -138,7 +129,6 @@ class ChatRepository {
     });
   }
 
-  /// Send a message with attachments.
   Future<ChatMessage> sendMessageWithAttachments({
     required String orderId,
     required String senderId,
@@ -148,7 +138,6 @@ class ChatRepository {
     _log.d('sendMessageWithAttachments: orderId=$orderId, '
         'files=${files.length}, text=$text');
     return supabaseGuard(() async {
-      // 1. Insert the message first
       final msgData = await _client
           .from('chat_messages')
           .insert({
@@ -162,17 +151,12 @@ class ChatRepository {
 
       final messageId = msgData['id'] as String;
 
-      // 2. Upload each file to Storage & insert attachment record
       for (final file in files) {
         final originalName = file.name;
         final bytes = await file.readAsBytes();
 
-        // [FIX] Determine MIME type BEFORE upload so Storage gets the correct
-        // Content-Type header (default application/octet-stream causes 400).
         final mimeType = _guessMimeType(originalName);
 
-        // [FIX] Use UUID-based storage path to avoid encoding issues with
-        // Cyrillic / special characters in the original file name.
         final ext = originalName.contains('.')
             ? '.${originalName.split('.').last.toLowerCase()}'
             : '';
@@ -210,7 +194,6 @@ class ChatRepository {
             'inserted for "$originalName"');
       }
 
-      // 3. Re-fetch message with attachments
       final fullData = await _client
           .from('chat_messages')
           .select('*, profiles!chat_messages_sender_id_fkey(full_name), chat_attachments(*)')
@@ -221,12 +204,7 @@ class ChatRepository {
     });
   }
 
-  // ──────────────────────────── Realtime ─────────────────────────────
 
-  /// Subscribe to new messages for an order via Supabase Realtime.
-  ///
-  /// Returns a [RealtimeChannel] that must be unsubscribed when done.
-  /// [onNewMessage] is called for each INSERT event.
   RealtimeChannel subscribeToMessages({
     required String orderId,
     required void Function(ChatMessage message) onNewMessage,
@@ -248,8 +226,6 @@ class ChatRepository {
             _log.d('subscribeToMessages: INSERT event received');
             try {
               final newRecord = payload.newRecord;
-              // The realtime payload doesn't include joined tables,
-              // so we need to fetch the full message.
               _fetchAndDeliver(newRecord['id'] as String, onNewMessage);
             } catch (e) {
               _log.e('subscribeToMessages: error processing event: $e');
@@ -261,7 +237,6 @@ class ChatRepository {
     return channel;
   }
 
-  /// Fetch a single message by ID and deliver it via callback.
   Future<void> _fetchAndDeliver(
     String messageId,
     void Function(ChatMessage) onNewMessage,
@@ -279,15 +254,12 @@ class ChatRepository {
     }
   }
 
-  /// Unsubscribe from a realtime channel.
   Future<void> unsubscribe(RealtimeChannel channel) async {
     _log.d('unsubscribe: removing channel');
     await _client.removeChannel(channel);
   }
 
-  // ──────────────────────────── Typing ───────────────────────────────
 
-  /// Broadcast typing indicator.
   void sendTypingIndicator({
     required RealtimeChannel channel,
     required String userId,
@@ -303,7 +275,6 @@ class ChatRepository {
     );
   }
 
-  /// Listen for typing indicators.
   void onTypingIndicator({
     required RealtimeChannel channel,
     required void Function(String userId, String userName) onTyping,
@@ -318,7 +289,6 @@ class ChatRepository {
     );
   }
 
-  // ──────────────────────────── Helpers ──────────────────────────────
 
   String _guessMimeType(String fileName) {
     final ext = fileName.split('.').last.toLowerCase();

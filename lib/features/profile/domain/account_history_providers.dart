@@ -13,19 +13,12 @@ part 'account_history_providers.g.dart';
 
 final _log = AppLogger.getLogger('AccountHistoryProviders');
 
-/// Email to pre-fill on LoginScreen after account switch.
-/// Set before signOut so it survives the redirect.
 final pendingLoginEmailProvider = StateProvider<String?>((ref) => null);
 
-/// Flag: user is adding a new account from Profile.
-/// Allows /auth/register to be accessed while still logged in.
 final addingAccountProvider = StateProvider<bool>((ref) => false);
 
-/// Flag: account switch in progress — suppresses router redirects
-/// to prevent navigation to login between signOut and restoreSession.
 final isSwitchingAccountProvider = StateProvider<bool>((ref) => false);
 
-/// SharedPreferences instance — keepAlive singleton.
 @Riverpod(keepAlive: true)
 Future<SharedPreferences> sharedPreferences(Ref ref) async {
   _log.d('sharedPreferences: initializing');
@@ -34,26 +27,17 @@ Future<SharedPreferences> sharedPreferences(Ref ref) async {
   return prefs;
 }
 
-/// AccountHistoryService — keepAlive singleton.
 @Riverpod(keepAlive: true)
 AccountHistoryService accountHistoryService(Ref ref) {
   final prefs = ref.watch(sharedPreferencesProvider).valueOrNull;
   if (prefs == null) {
     _log.d('accountHistoryService: SharedPreferences not ready yet');
-    // Return a service that will work once prefs are available.
-    // This is a temporary state — the provider will rebuild when prefs resolve.
     throw StateError('SharedPreferences not yet initialized');
   }
   _log.i('accountHistoryService: created with SharedPreferences');
   return AccountHistoryService(prefs);
 }
 
-/// StateNotifier for the list of recent emails — provides reactive updates.
-///
-/// [FIX] keepAlive: true — prevents provider disposal during navigation
-/// (splash → org-select → orders) when switching accounts.
-/// Without this, the notifier (and stored emails + tokens) would be lost
-/// when the widget tree rebuilds during account switch.
 @Riverpod(keepAlive: true)
 class RecentEmailsNotifier extends _$RecentEmailsNotifier {
   @override
@@ -69,11 +53,9 @@ class RecentEmailsNotifier extends _$RecentEmailsNotifier {
     }
   }
 
-  /// Add email and refresh state.
   Future<void> addEmail(String email) async {
     _log.d('RecentEmailsNotifier.addEmail: email=$email');
     try {
-      // Ensure SharedPreferences is ready before saving
       final prefs = await SharedPreferences.getInstance();
       final service = AccountHistoryService(prefs);
       await service.addEmail(email);
@@ -84,7 +66,6 @@ class RecentEmailsNotifier extends _$RecentEmailsNotifier {
     }
   }
 
-  /// Remove email and refresh state.
   Future<void> removeEmail(String email) async {
     _log.d('RecentEmailsNotifier.removeEmail: email=$email');
     try {
@@ -99,7 +80,6 @@ class RecentEmailsNotifier extends _$RecentEmailsNotifier {
     }
   }
 
-  /// Save a refresh token for a specific email.
   Future<void> saveRefreshToken(String email, String refreshToken) async {
     _log.d('[FIX] saveRefreshToken: email=$email');
     try {
@@ -112,7 +92,6 @@ class RecentEmailsNotifier extends _$RecentEmailsNotifier {
     }
   }
 
-  /// Get the stored refresh token for [email], or null.
   String? getRefreshToken(String email) {
     _log.d('[FIX] getRefreshToken: email=$email');
     try {
@@ -125,12 +104,6 @@ class RecentEmailsNotifier extends _$RecentEmailsNotifier {
   }
 }
 
-/// [FIX] Auth state change listener — keepAlive.
-///
-/// Subscribes to Supabase auth state changes and automatically updates
-/// the stored refresh token when a `tokenRefreshed` event occurs.
-/// This prevents stale tokens from being saved when the SDK rotates
-/// them in the background.
 @Riverpod(keepAlive: true)
 Stream<void> authTokenRefreshWatcher(Ref ref) {
   final client = ref.watch(supabaseClientProvider);

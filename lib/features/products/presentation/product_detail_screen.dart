@@ -10,9 +10,6 @@ import 'package:deskflow/core/widgets/skeleton_loader.dart';
 import 'package:deskflow/features/products/domain/product.dart';
 import 'package:deskflow/features/products/domain/product_providers.dart';
 
-/// Product detail screen — displays product info.
-///
-/// Owners see an "Edit" button navigating to admin catalog edit.
 class ProductDetailScreen extends ConsumerWidget {
   final String productId;
 
@@ -56,22 +53,18 @@ class _ProductContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(DeskflowSpacing.lg),
       children: [
-        // ── Product image / hero ──
         _ProductHero(product: product),
         const SizedBox(height: DeskflowSpacing.lg),
 
-        // ── Details card ──
         GlassCard(
           child: Padding(
             padding: const EdgeInsets.all(DeskflowSpacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Name
                 Text(product.name, style: DeskflowTypography.h2),
                 const SizedBox(height: DeskflowSpacing.md),
 
-                // Price
                 Text(
                   product.formattedPrice,
                   style: DeskflowTypography.h1.copyWith(
@@ -80,7 +73,6 @@ class _ProductContent extends StatelessWidget {
                 ),
                 const SizedBox(height: DeskflowSpacing.lg),
 
-                // Status
                 Row(
                   children: [
                     Container(
@@ -105,7 +97,6 @@ class _ProductContent extends StatelessWidget {
                   ],
                 ),
 
-                // SKU
                 if (product.sku != null) ...[
                   const SizedBox(height: DeskflowSpacing.lg),
                   const Divider(),
@@ -117,7 +108,6 @@ class _ProductContent extends StatelessWidget {
           ),
         ),
 
-        // ── Description ──
         if (product.description != null &&
             product.description!.isNotEmpty) ...[
           const SizedBox(height: DeskflowSpacing.lg),
@@ -145,7 +135,6 @@ class _ProductContent extends StatelessWidget {
   }
 }
 
-/// Product image hero area.
 class _ProductHero extends StatelessWidget {
   final Product product;
 
@@ -213,7 +202,6 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
-/// Loading skeleton for product detail.
 class _ProductDetailSkeleton extends StatelessWidget {
   const _ProductDetailSkeleton();
 

@@ -2,19 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:deskflow/core/theme/deskflow_theme.dart';
 
-/// Full-screen empty state placeholder.
-///
-/// Shows an icon, title, optional description, and optional CTA button.
-///
-/// ```dart
-/// EmptyStateWidget(
-///   icon: Icons.inbox_outlined,
-///   title: 'Нет заказов',
-///   description: 'Создайте первый заказ!',
-///   actionLabel: 'Создать',
-///   onAction: () => context.push('/orders/create'),
-/// )
-/// ```
 class EmptyStateWidget extends StatelessWidget {
   const EmptyStateWidget({
     super.key,

@@ -32,7 +32,6 @@ void main() {
       await tester.pumpWidget(MaterialApp.router(routerConfig: router));
       await tester.pumpAndSettle();
 
-      // Navigate to detail
       await tester.tap(find.text('Go'));
       await tester.pumpAndSettle();
 

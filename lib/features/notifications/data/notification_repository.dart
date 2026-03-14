@@ -5,14 +5,11 @@ import 'package:deskflow/features/notifications/domain/notification_model.dart';
 
 final _log = AppLogger.getLogger('NotificationRepository');
 
-/// Repository for CRUD operations on the `notifications` table.
 class NotificationRepository {
   final SupabaseClient _client;
 
   NotificationRepository(this._client);
 
-  /// Fetch all notifications for the current user, newest first.
-  /// Optionally filter by [orgId].
   Future<List<AppNotification>> getNotifications({
     required String orgId,
     int limit = 50,
@@ -32,7 +29,6 @@ class NotificationRepository {
     return list;
   }
 
-  /// Count of unread notifications for the current user in [orgId].
   Future<int> getUnreadCount({required String orgId}) async {
     _log.d('[FIX] getUnreadCount: orgId=$orgId');
     final response = await _client
@@ -46,7 +42,6 @@ class NotificationRepository {
     return count;
   }
 
-  /// Mark a single notification as read.
   Future<void> markAsRead(String notificationId) async {
     _log.d('[FIX] markAsRead: id=$notificationId');
     await _client
@@ -55,7 +50,6 @@ class NotificationRepository {
         .eq('id', notificationId);
   }
 
-  /// Mark all notifications as read for the current user in [orgId].
   Future<void> markAllAsRead({required String orgId}) async {
     _log.d('[FIX] markAllAsRead: orgId=$orgId');
     await _client
@@ -65,14 +59,11 @@ class NotificationRepository {
         .eq('is_read', false);
   }
 
-  /// Delete a single notification.
   Future<void> deleteNotification(String notificationId) async {
     _log.d('[FIX] deleteNotification: id=$notificationId');
     await _client.from('notifications').delete().eq('id', notificationId);
   }
 
-  /// Subscribe to realtime INSERT events on the notifications table
-  /// for the current user.
   RealtimeChannel subscribeToNotifications({
     required String userId,
     required void Function(AppNotification notification) onInsert,

@@ -14,7 +14,6 @@ import 'package:deskflow/features/orders/domain/order_providers.dart';
 import 'package:deskflow/features/orders/presentation/status_change_sheet.dart';
 import 'package:deskflow/features/chat/domain/chat_providers.dart';
 
-/// Order detail screen — shows full order info, items, and audit log.
 class OrderDetailScreen extends ConsumerWidget {
   const OrderDetailScreen({super.key, required this.orderId});
 
@@ -68,7 +67,6 @@ class OrderDetailScreen extends ConsumerWidget {
   }
 }
 
-/// Main body with all order sections.
 class _OrderDetailBody extends ConsumerWidget {
   const _OrderDetailBody({
     required this.order,
@@ -91,11 +89,9 @@ class _OrderDetailBody extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.all(DeskflowSpacing.lg),
               children: [
-                // ── Status & Number ──
                 _HeaderSection(order: order),
                 const SizedBox(height: DeskflowSpacing.lg),
 
-                // ── Customer ──
                 if (order.customerName != null) ...[
                   _SectionTitle(title: 'Клиент'),
                   const SizedBox(height: DeskflowSpacing.sm),
@@ -113,7 +109,6 @@ class _OrderDetailBody extends ConsumerWidget {
                   const SizedBox(height: DeskflowSpacing.lg),
                 ],
 
-                // ── Items ──
                 _SectionTitle(title: 'Товары (${order.items.length})'),
                 const SizedBox(height: DeskflowSpacing.sm),
                 if (order.items.isEmpty)
@@ -164,7 +159,6 @@ class _OrderDetailBody extends ConsumerWidget {
 
                 const SizedBox(height: DeskflowSpacing.lg),
 
-                // ── Cost summary ──
                 _SectionTitle(title: 'Стоимость'),
                 const SizedBox(height: DeskflowSpacing.sm),
                 GlassCard(
@@ -194,7 +188,6 @@ class _OrderDetailBody extends ConsumerWidget {
                   ),
                 ),
 
-                // ── Notes ──
                 if (order.notes != null &&
                     order.notes!.isNotEmpty) ...[
                   const SizedBox(height: DeskflowSpacing.lg),
@@ -208,12 +201,10 @@ class _OrderDetailBody extends ConsumerWidget {
 
                 const SizedBox(height: DeskflowSpacing.lg),
 
-                // ── Chat preview ──
                 _ChatPreviewSection(orderId: orderId),
 
                 const SizedBox(height: DeskflowSpacing.lg),
 
-                // ── Audit log ──
                 _AuditLogSection(orderId: orderId),
 
                 const SizedBox(height: DeskflowSpacing.xxl),
@@ -222,14 +213,12 @@ class _OrderDetailBody extends ConsumerWidget {
           ),
         ),
 
-        // ── Bottom action bar ──
         _BottomActionBar(order: order, orderId: orderId),
       ],
     );
   }
 }
 
-/// Header with order number, status badge, and date.
 class _HeaderSection extends StatelessWidget {
   const _HeaderSection({required this.order});
 
@@ -274,7 +263,6 @@ class _HeaderSection extends StatelessWidget {
   }
 }
 
-/// Chat preview section — shows latest messages and count.
 class _ChatPreviewSection extends ConsumerWidget {
   const _ChatPreviewSection({required this.orderId});
 
@@ -377,7 +365,6 @@ class _ChatPreviewSection extends ConsumerWidget {
   }
 }
 
-/// Audit log section — fetches and displays events.
 class _AuditLogSection extends ConsumerWidget {
   const _AuditLogSection({required this.orderId});
 
@@ -424,13 +411,11 @@ class _AuditLogSection extends ConsumerWidget {
   }
 }
 
-/// Internal provider for audit log — not annotated, just a simple provider.
 final _auditLogProvider =
     FutureProvider.family<List<AuditEvent>, String>((ref, orderId) {
   return ref.watch(orderRepositoryProvider).getOrderAuditLog(orderId);
 });
 
-/// Single audit event row.
 class _AuditEventRow extends StatelessWidget {
   const _AuditEventRow({required this.event});
 
@@ -471,7 +456,6 @@ class _AuditEventRow extends StatelessWidget {
                     ),
                   ],
                 ),
-                // Show status change detail
                 if (event.action == 'status_changed' &&
                     event.newValue != null)
                   Padding(
@@ -502,7 +486,6 @@ class _AuditEventRow extends StatelessWidget {
   }
 }
 
-/// Bottom bar with "Change Status" button.
 class _BottomActionBar extends ConsumerWidget {
   const _BottomActionBar({required this.order, required this.orderId});
 
@@ -579,7 +562,6 @@ class _BottomActionBar extends ConsumerWidget {
   }
 }
 
-/// Cost summary row.
 class _CostRow extends StatelessWidget {
   const _CostRow({
     required this.label,
@@ -606,7 +588,6 @@ class _CostRow extends StatelessWidget {
   }
 }
 
-/// Section title widget.
 class _SectionTitle extends StatelessWidget {
   const _SectionTitle({required this.title});
 
@@ -618,7 +599,6 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-/// Loading skeleton for order detail.
 class _LoadingSkeleton extends StatelessWidget {
   const _LoadingSkeleton();
 

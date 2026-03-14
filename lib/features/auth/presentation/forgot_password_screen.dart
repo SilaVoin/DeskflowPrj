@@ -12,7 +12,6 @@ import 'package:deskflow/features/auth/domain/auth_notifier.dart';
 
 final _log = AppLogger.getLogger('ForgotPasswordScreen');
 
-/// Forgot password screen — send reset link.
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
 

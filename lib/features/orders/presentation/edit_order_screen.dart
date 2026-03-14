@@ -8,14 +8,18 @@ import 'package:deskflow/core/theme/deskflow_theme.dart';
 import 'package:deskflow/core/utils/currency_formatter.dart';
 import 'package:deskflow/core/widgets/error_state_widget.dart';
 import 'package:deskflow/core/widgets/glass_card.dart';
+import 'package:deskflow/core/widgets/glass_chip.dart';
 import 'package:deskflow/core/widgets/glass_text_field.dart';
 import 'package:deskflow/core/widgets/pill_button.dart';
 import 'package:deskflow/core/widgets/skeleton_loader.dart';
+import 'package:deskflow/features/orders/domain/customer.dart';
 import 'package:deskflow/features/orders/domain/order.dart';
+import 'package:deskflow/features/orders/domain/order_composition.dart';
 import 'package:deskflow/features/orders/domain/order_notifier.dart';
 import 'package:deskflow/features/orders/domain/order_providers.dart';
+import 'package:deskflow/features/orders/domain/order_template.dart';
+import 'package:deskflow/features/products/domain/product.dart';
 
-/// Edit order screen — allows editing delivery cost, notes, and customer.
 class EditOrderScreen extends HookConsumerWidget {
   final String orderId;
 
@@ -60,13 +64,25 @@ class _EditOrderForm extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notesController =
-        useTextEditingController(text: order.notes ?? '');
+    final notesController = useTextEditingController(text: order.notes ?? '');
     final deliveryCostController = useTextEditingController(
       text: order.deliveryCost.toStringAsFixed(2),
     );
+    final selectedCustomer = useState<Customer?>(
+      order.customerId == null
+          ? null
+          : Customer(
+              id: order.customerId!,
+              organizationId: order.organizationId,
+              name: order.customerName ?? 'Клиент',
+              createdAt: order.createdAt,
+            ),
+    );
     final orderState = ref.watch(orderNotifierProvider);
     final isLoading = orderState.isLoading;
+    final templatesAsync = ref.watch(orderTemplatesProvider);
+    final recentCustomersAsync = ref.watch(recentOrderCustomersProvider);
+    final recentProductsAsync = ref.watch(recentOrderProductsProvider);
 
     ref.listen<AsyncValue<void>>(orderNotifierProvider, (_, next) {
       if (next.hasError) {
@@ -94,16 +110,102 @@ class _EditOrderForm extends HookConsumerWidget {
           .read(orderNotifierProvider.notifier)
           .updateOrder(
             orderId: order.id,
+            customerId: selectedCustomer.value?.id,
             deliveryCost: deliveryCost,
             notes: notes,
           );
 
       if (success && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Заказ обновлён')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Заказ обновлён')));
         context.pop();
       }
+    }
+
+    bool hasUnsavedChanges() {
+      final currentDeliveryCost =
+          double.tryParse(deliveryCostController.text.trim()) ?? 0;
+      final currentNotes = notesController.text.trim().isEmpty
+          ? null
+          : notesController.text.trim();
+
+      return selectedCustomer.value?.id != order.customerId ||
+          currentDeliveryCost != order.deliveryCost ||
+          currentNotes != order.notes;
+    }
+
+    Future<bool> confirmLeaveForNewOrder() async {
+      if (!hasUnsavedChanges()) {
+        return true;
+      }
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: DeskflowColors.glassSurfaceElevated,
+          title: const Text('Перейти к новому заказу?'),
+          content: const Text(
+            'Несохранённые изменения в текущем заказе будут потеряны.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Остаться'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Перейти'),
+            ),
+          ],
+        ),
+      );
+
+      return confirmed == true;
+    }
+
+    Future<void> saveAsTemplate() async {
+      final controller = TextEditingController();
+      final savedName = await showDialog<String>(
+        context: context,
+        barrierColor: Colors.black.withValues(alpha: 0.68),
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: DeskflowColors.modalSurface,
+          surfaceTintColor: Colors.transparent,
+          title: const Text('Новый шаблон'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'Название шаблона'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Отмена'),
+            ),
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(controller.text.trim()),
+              child: const Text('Сохранить шаблон'),
+            ),
+          ],
+        ),
+      );
+
+      if (savedName == null || savedName.isEmpty) return;
+
+      final template = await ref
+          .read(orderNotifierProvider.notifier)
+          .saveOrderTemplate(
+            name: savedName,
+            composition: OrderComposition.fromOrderItems(order.items),
+          );
+
+      if (!context.mounted || template == null) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Шаблон "${template.name}" сохранён')),
+      );
     }
 
     return Scaffold(
@@ -131,7 +233,6 @@ class _EditOrderForm extends HookConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Order number info
               GlassCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,10 +241,10 @@ class _EditOrderForm extends HookConsumerWidget {
                       'Заказ ${order.formattedNumber}',
                       style: DeskflowTypography.h3,
                     ),
-                    if (order.customerName != null) ...[
+                    if (selectedCustomer.value != null) ...[
                       const SizedBox(height: DeskflowSpacing.xs),
                       Text(
-                        'Клиент: ${order.customerName}',
+                        'Клиент: ${selectedCustomer.value!.name}',
                         style: DeskflowTypography.bodySmall,
                       ),
                     ],
@@ -160,9 +261,85 @@ class _EditOrderForm extends HookConsumerWidget {
 
               const SizedBox(height: DeskflowSpacing.lg),
 
-              // Delivery cost
-              const Text('Стоимость доставки',
-                  style: DeskflowTypography.h3),
+              GlassCard(
+                elevated: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Быстрые источники',
+                          style: DeskflowTypography.h3,
+                        ),
+                        TextButton(
+                          onPressed: order.items.isEmpty
+                              ? null
+                              : saveAsTemplate,
+                          child: const Text('Сохранить как шаблон'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: DeskflowSpacing.md),
+                    _EditQuickSourceGroup<OrderTemplate>(
+                      title: 'Шаблоны',
+                      itemsAsync: templatesAsync,
+                      labelBuilder: (template) => template.name,
+                      onTap: (template) async {
+                        if (!await confirmLeaveForNewOrder()) {
+                          return;
+                        }
+                        if (!context.mounted) {
+                          return;
+                        }
+                        context.push(
+                          '/orders/create',
+                          extra: template.composition,
+                        );
+                      },
+                    ),
+                    const SizedBox(height: DeskflowSpacing.md),
+                    _EditQuickSourceGroup<Customer>(
+                      title: 'Последние клиенты',
+                      itemsAsync: recentCustomersAsync,
+                      labelBuilder: (customer) => customer.name,
+                      onTap: (customer) => selectedCustomer.value = customer,
+                    ),
+                    const SizedBox(height: DeskflowSpacing.md),
+                    _EditQuickSourceGroup<Product>(
+                      title: 'Последние товары',
+                      itemsAsync: recentProductsAsync,
+                      labelBuilder: (product) => product.name,
+                      onTap: (product) async {
+                        if (!await confirmLeaveForNewOrder()) {
+                          return;
+                        }
+                        if (!context.mounted) {
+                          return;
+                        }
+                        context.push(
+                          '/orders/create',
+                          extra: OrderComposition(
+                            items: [
+                              OrderCompositionItem(
+                                productId: product.id,
+                                productName: product.name,
+                                unitPrice: product.price,
+                                quantity: 1,
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: DeskflowSpacing.lg),
+
+              const Text('Стоимость доставки', style: DeskflowTypography.h3),
               const SizedBox(height: DeskflowSpacing.sm),
               GlassCard(
                 child: GlassTextField(
@@ -170,13 +347,13 @@ class _EditOrderForm extends HookConsumerWidget {
                   hint: '0.00',
                   controller: deliveryCostController,
                   keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true),
+                    decimal: true,
+                  ),
                 ),
               ),
 
               const SizedBox(height: DeskflowSpacing.lg),
 
-              // Notes
               const Text('Заметки', style: DeskflowTypography.h3),
               const SizedBox(height: DeskflowSpacing.sm),
               GlassCard(
@@ -191,48 +368,49 @@ class _EditOrderForm extends HookConsumerWidget {
 
               const SizedBox(height: DeskflowSpacing.lg),
 
-              // Items summary (read-only)
               if (order.items.isNotEmpty) ...[
                 const Text('Товары', style: DeskflowTypography.h3),
                 const SizedBox(height: DeskflowSpacing.sm),
                 GlassCard(
                   child: Column(
                     children: [
-                      ...order.items.map((item) => Padding(
-                            padding: const EdgeInsets.only(
-                                bottom: DeskflowSpacing.sm),
-                            child: Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    '${item.productName} ×${item.quantity}',
-                                    style: DeskflowTypography.body,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                      ...order.items.map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(
+                            bottom: DeskflowSpacing.sm,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${item.productName} ×${item.quantity}',
+                                  style: DeskflowTypography.body,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                Text(
-                                  CurrencyFormatter.formatCompact(item.unitPrice * item.quantity),
-                                  style: DeskflowTypography.body
-                                      .copyWith(
-                                          fontWeight: FontWeight.w600),
+                              ),
+                              Text(
+                                CurrencyFormatter.formatCompact(
+                                  item.unitPrice * item.quantity,
                                 ),
-                              ],
-                            ),
-                          )),
-                      const Divider(
-                        color: DeskflowColors.glassBorder,
+                                style: DeskflowTypography.body.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
+                      const Divider(color: DeskflowColors.glassBorder),
                       Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Итого товары',
-                              style: DeskflowTypography.body),
+                          const Text(
+                            'Итого товары',
+                            style: DeskflowTypography.body,
+                          ),
                           Text(
-                            // Items subtotal (items only, excluding delivery)
                             CurrencyFormatter.formatCompact(order.itemsTotal),
                             style: DeskflowTypography.body.copyWith(
                               fontWeight: FontWeight.w700,
@@ -250,6 +428,68 @@ class _EditOrderForm extends HookConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _EditQuickSourceGroup<T> extends StatelessWidget {
+  const _EditQuickSourceGroup({
+    required this.title,
+    required this.itemsAsync,
+    required this.labelBuilder,
+    required this.onTap,
+  });
+
+  final String title;
+  final AsyncValue<List<T>> itemsAsync;
+  final String Function(T item) labelBuilder;
+  final ValueChanged<T> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: DeskflowTypography.bodySmall.copyWith(
+            color: DeskflowColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: DeskflowSpacing.sm),
+        itemsAsync.when(
+          data: (items) {
+            if (items.isEmpty) {
+              return Text(
+                'Пока пусто',
+                style: DeskflowTypography.bodySmall.copyWith(
+                  color: DeskflowColors.textTertiary,
+                ),
+              );
+            }
+
+            return Wrap(
+              spacing: DeskflowSpacing.sm,
+              runSpacing: DeskflowSpacing.sm,
+              children: items
+                  .map(
+                    (item) => GlassChip(
+                      label: labelBuilder(item),
+                      onTap: () => onTap(item),
+                    ),
+                  )
+                  .toList(),
+            );
+          },
+          loading: () => const LinearProgressIndicator(minHeight: 2),
+          error: (error, stackTrace) => Text(
+            'Не удалось загрузить',
+            style: DeskflowTypography.bodySmall.copyWith(
+              color: DeskflowColors.textTertiary,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

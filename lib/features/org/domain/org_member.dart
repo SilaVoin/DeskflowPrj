@@ -1,28 +1,26 @@
-/// Org member role enum.
 enum OrgRole {
   owner,
   admin,
   member;
 
-  factory OrgRole.fromString(String value) {
+  static OrgRole fromString(String value) {
     return switch (value) {
       'owner' => OrgRole.owner,
       'admin' => OrgRole.admin,
+      'member' => OrgRole.member,
       _ => OrgRole.member,
     };
   }
 
   String toJson() => name;
 
-  /// User-facing label in Russian.
   String get label => switch (this) {
-        OrgRole.owner => 'Владелец',
-        OrgRole.admin => 'Администратор',
-        OrgRole.member => 'Участник',
+        OrgRole.owner => '\u0412\u043b\u0430\u0434\u0435\u043b\u0435\u0446',
+        OrgRole.admin => '\u0410\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440',
+        OrgRole.member => '\u0423\u0447\u0430\u0441\u0442\u043d\u0438\u043a',
       };
 }
 
-/// Organization membership domain model.
 class OrgMember {
   final String id;
   final String organizationId;
@@ -43,7 +41,7 @@ class OrgMember {
       id: json['id'] as String,
       organizationId: json['organization_id'] as String,
       userId: json['user_id'] as String,
-      role: OrgRole.fromString(json['role'] as String),
+      role: OrgRole.fromString(json['role'] as String? ?? 'member'),
       joinedAt: DateTime.parse(json['joined_at'] as String),
     );
   }

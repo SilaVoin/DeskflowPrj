@@ -2,19 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:deskflow/core/theme/deskflow_theme.dart';
 
-/// Skeleton shimmer loader that mimics future content shapes.
-///
-/// ```dart
-/// SkeletonLoader(
-///   child: Column(
-///     children: [
-///       SkeletonLoader.box(height: 80),
-///       SizedBox(height: 12),
-///       SkeletonLoader.box(height: 80),
-///     ],
-///   ),
-/// )
-/// ```
 class SkeletonLoader extends StatefulWidget {
   const SkeletonLoader({
     super.key,
@@ -23,7 +10,6 @@ class SkeletonLoader extends StatefulWidget {
 
   final Widget child;
 
-  /// Helper to create a rounded skeleton rectangle.
   static Widget box({
     double? width,
     double height = 16,
@@ -39,7 +25,6 @@ class SkeletonLoader extends StatefulWidget {
     );
   }
 
-  /// Helper to create a skeleton circle (avatar).
   static Widget circle({double size = 40}) {
     return Container(
       width: size,

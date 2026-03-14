@@ -2,17 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:deskflow/core/theme/deskflow_theme.dart';
 
-/// Small glass capsule chip for filters and tags.
-///
-/// Use [selected] to toggle the active (blue) state.
-///
-/// ```dart
-/// GlassChip(
-///   label: 'Все',
-///   selected: true,
-///   onTap: () {},
-/// )
-/// ```
 class GlassChip extends StatelessWidget {
   const GlassChip({
     super.key,
@@ -27,17 +16,15 @@ class GlassChip extends StatelessWidget {
   final bool selected;
   final VoidCallback? onTap;
 
-  /// Optional leading widget (e.g., a colored dot).
   final Widget? leading;
 
-  /// Override the tint color when selected.
   final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final bgColor = selected
-        ? (color ?? DeskflowColors.primary)
-        : DeskflowColors.glassSurface;
+        ? (color ?? DeskflowColors.primary.withValues(alpha: 0.3))
+        : DeskflowColors.shellGlassSurface;
     final textColor = selected
         ? DeskflowColors.textPrimary
         : DeskflowColors.textSecondary;
@@ -56,8 +43,8 @@ class GlassChip extends StatelessWidget {
           border: Border.all(
             color: selected
                 ? (color ?? DeskflowColors.primarySolid).withValues(alpha: 0.4)
-                : DeskflowColors.glassBorder,
-            width: 0.5,
+                : DeskflowColors.glassBorderStrong.withValues(alpha: 0.68),
+            width: 0.75,
           ),
         ),
         child: Row(

@@ -5,9 +5,6 @@ import 'package:deskflow/core/theme/deskflow_theme.dart';
 import 'package:deskflow/core/widgets/glass_card.dart';
 import 'package:deskflow/features/profile/domain/profile_providers.dart';
 
-/// Notification preferences screen.
-///
-/// Persists settings to Supabase `user_preferences` table per user+org.
 class NotificationSettingsScreen extends ConsumerWidget {
   const NotificationSettingsScreen({super.key});
 

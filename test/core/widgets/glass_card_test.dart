@@ -58,7 +58,6 @@ void main() {
         buildApp(const GlassCard(child: Text('No tap'))),
       );
 
-      // Tapping should not throw
       await tester.tap(find.text('No tap'));
       await tester.pumpAndSettle();
 
@@ -75,7 +74,6 @@ void main() {
         ),
       );
 
-      // Find the Padding widget with our custom padding
       final padding = tester.widget<Padding>(
         find.ancestor(
           of: find.text('Padded'),

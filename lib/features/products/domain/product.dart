@@ -1,6 +1,5 @@
 import 'package:deskflow/core/utils/currency_formatter.dart';
 
-/// Product domain model.
 class Product {
   final String id;
   final String organizationId;
@@ -24,7 +23,6 @@ class Product {
     required this.createdAt,
   });
 
-  /// Formatted price with currency symbol (Russian format: `1 234,50 ₽`).
   String get formattedPrice => CurrencyFormatter.formatCompact(price);
 
   factory Product.fromJson(Map<String, dynamic> json) {

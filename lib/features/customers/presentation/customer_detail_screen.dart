@@ -14,8 +14,6 @@ import 'package:deskflow/features/customers/domain/customer_providers.dart';
 import 'package:deskflow/features/orders/domain/customer.dart';
 import 'package:deskflow/features/orders/domain/order.dart';
 
-/// Customer detail screen — shows customer info, contact actions,
-/// and linked orders list.
 class CustomerDetailScreen extends ConsumerWidget {
   final String customerId;
 
@@ -76,25 +74,20 @@ class _CustomerContent extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(DeskflowSpacing.lg),
         children: [
-          // ── Header ──
           _CustomerHeader(customer: customer),
           const SizedBox(height: DeskflowSpacing.lg),
 
-          // ── Contact info ──
           _ContactSection(customer: customer),
           const SizedBox(height: DeskflowSpacing.lg),
 
-          // ── Stats ──
           _StatsSection(customer: customer),
           const SizedBox(height: DeskflowSpacing.lg),
 
-          // ── Notes ──
           if (customer.notes != null && customer.notes!.isNotEmpty) ...[
             _NotesSection(notes: customer.notes!),
             const SizedBox(height: DeskflowSpacing.lg),
           ],
 
-          // ── Orders ──
           _OrdersSection(ordersAsync: ordersAsync),
           const SizedBox(height: DeskflowSpacing.xxxl * 2),
         ],
@@ -103,7 +96,6 @@ class _CustomerContent extends StatelessWidget {
   }
 }
 
-/// Customer avatar + name header.
 class _CustomerHeader extends StatelessWidget {
   final Customer customer;
 
@@ -113,7 +105,6 @@ class _CustomerHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Avatar circle
         Container(
           width: 72,
           height: 72,
@@ -138,7 +129,6 @@ class _CustomerHeader extends StatelessWidget {
         ),
         const SizedBox(height: DeskflowSpacing.md),
 
-        // Quick action buttons
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -171,7 +161,6 @@ class _CustomerHeader extends StatelessWidget {
   }
 }
 
-/// Quick action button (call / email).
 class _QuickActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -207,7 +196,6 @@ class _QuickActionButton extends StatelessWidget {
   }
 }
 
-/// Contact details section.
 class _ContactSection extends StatelessWidget {
   final Customer customer;
 
@@ -275,7 +263,6 @@ class _ContactRow extends StatelessWidget {
   }
 }
 
-/// Stats (order count, total spent).
 class _StatsSection extends StatelessWidget {
   final Customer customer;
 
@@ -325,7 +312,6 @@ class _StatsSection extends StatelessWidget {
   }
 }
 
-/// Notes section.
 class _NotesSection extends StatelessWidget {
   final String notes;
 
@@ -349,7 +335,6 @@ class _NotesSection extends StatelessWidget {
   }
 }
 
-/// Orders section — list of customer orders.
 class _OrdersSection extends StatelessWidget {
   final AsyncValue<List<Order>> ordersAsync;
 
@@ -444,7 +429,6 @@ class _OrdersSection extends StatelessWidget {
   }
 }
 
-/// Loading skeleton for customer detail.
 class _CustomerDetailSkeleton extends StatelessWidget {
   const _CustomerDetailSkeleton();
 

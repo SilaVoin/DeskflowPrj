@@ -19,11 +19,6 @@ import 'package:deskflow/features/org/domain/org_providers.dart';
 
 final _log = AppLogger.getLogger('EditProductScreen');
 
-/// Admin screen for creating or editing a product.
-///
-/// Routes:
-/// - `/admin/catalog/create` — create mode (productId == null)
-/// - `/admin/catalog/:id` — edit mode
 class EditProductScreen extends HookConsumerWidget {
   final String? productId;
 
@@ -67,7 +62,6 @@ class EditProductScreen extends HookConsumerWidget {
   }
 }
 
-/// Product create/edit form.
 class _ProductForm extends HookConsumerWidget {
   final Product? product;
 
@@ -89,7 +83,6 @@ class _ProductForm extends HookConsumerWidget {
     final isLoading = useState(false);
     final formKey = useMemoized(() => GlobalKey<FormState>());
 
-    // Image picker state
     final pickedImageBytes = useState<Uint8List?>(null);
     final pickedImageExt = useState<String>('jpg');
     final imageUrl = useState<String?>(product?.imageUrl);
@@ -111,7 +104,6 @@ class _ProductForm extends HookConsumerWidget {
       pickedImageExt.value = (ext == 'png' || ext == 'webp') ? ext : 'jpeg';
     }
 
-    /// Upload picked image and return the public URL.
     Future<String?> uploadImage(String productId) async {
       if (pickedImageBytes.value == null) return imageUrl.value;
       isUploadingImage.value = true;
@@ -147,7 +139,6 @@ class _ProductForm extends HookConsumerWidget {
             double.tryParse(priceController.text.trim()) ?? 0.0;
 
         if (isEditing) {
-          // Upload image if picked
           final uploadedUrl = await uploadImage(product!.id);
 
           await repo.updateProduct(
@@ -177,7 +168,6 @@ class _ProductForm extends HookConsumerWidget {
                 : descController.text.trim(),
           );
 
-          // Upload image for newly created product
           if (pickedImageBytes.value != null) {
             final uploadedUrl = await uploadImage(created.id);
             if (uploadedUrl != null) {
@@ -241,7 +231,6 @@ class _ProductForm extends HookConsumerWidget {
       if (!context.mounted) return;
 
       try {
-        // Delete not implemented in repo - deactivate instead
         await ref
             .read(productRepositoryProvider)
             .updateProduct(
@@ -278,7 +267,6 @@ class _ProductForm extends HookConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Photo section
               GlassCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -384,7 +372,6 @@ class _ProductForm extends HookConsumerWidget {
 
               const SizedBox(height: DeskflowSpacing.lg),
 
-              // Main info
               GlassCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -436,7 +423,6 @@ class _ProductForm extends HookConsumerWidget {
 
               const SizedBox(height: DeskflowSpacing.lg),
 
-              // Description
               GlassCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -456,7 +442,6 @@ class _ProductForm extends HookConsumerWidget {
 
               const SizedBox(height: DeskflowSpacing.lg),
 
-              // Active toggle
               GlassCard(
                 child: SwitchListTile(
                   title: const Text(
@@ -476,7 +461,6 @@ class _ProductForm extends HookConsumerWidget {
 
               const SizedBox(height: DeskflowSpacing.xxl),
 
-              // Save button
               PillButton(
                 label: 'Сохранить',
                 onPressed: save,
@@ -503,7 +487,6 @@ class _ProductForm extends HookConsumerWidget {
   }
 }
 
-/// Placeholder for product photo upload area.
 class _PhotoPlaceholder extends StatelessWidget {
   const _PhotoPlaceholder();
 

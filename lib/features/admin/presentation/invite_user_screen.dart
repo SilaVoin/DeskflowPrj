@@ -17,7 +17,6 @@ import 'package:deskflow/features/org/domain/org_providers.dart';
 
 final _log = AppLogger.getLogger('InviteUserScreen');
 
-/// Screen for inviting a new user to the organization.
 class InviteUserScreen extends HookConsumerWidget {
   const InviteUserScreen({super.key});
 
@@ -52,7 +51,6 @@ class InviteUserScreen extends HookConsumerWidget {
       } catch (e) {
         _log.w('[FIX] inviteMember error: $e');
         if (context.mounted) {
-          // [FIX] Show DeskflowException.message, not toString()
           final message = e is DeskflowException
               ? e.message
               : 'Произошла ошибка';
@@ -65,7 +63,6 @@ class InviteUserScreen extends HookConsumerWidget {
       }
     }
 
-    // Get invite code for copy
     final orgsAsync = ref.watch(userOrganizationsProvider);
     final orgId = ref.watch(currentOrgIdProvider);
 
@@ -81,7 +78,6 @@ class InviteUserScreen extends HookConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Email field
               GlassCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,7 +101,6 @@ class InviteUserScreen extends HookConsumerWidget {
                     ),
                     const SizedBox(height: DeskflowSpacing.lg),
 
-                    // Role picker
                     Text('Роль', style: DeskflowTypography.caption),
                     const SizedBox(height: DeskflowSpacing.sm),
                     Row(
@@ -170,7 +165,6 @@ class InviteUserScreen extends HookConsumerWidget {
 
               const SizedBox(height: DeskflowSpacing.xl),
 
-              // Invite code section
               orgsAsync.when(
                 data: (orgs) {
                   final currentOrg = orgs
@@ -180,8 +174,6 @@ class InviteUserScreen extends HookConsumerWidget {
                     return const SizedBox.shrink();
                   }
 
-                  // [FIX] Build invite link with code query param
-                  // Works for web (hash routing) and as deep link
                   const webHost = 'https://deskflow.app';
                   final joinLink =
                       '$webHost/org/join?code=${currentOrg!.inviteCode}';
@@ -263,7 +255,6 @@ class InviteUserScreen extends HookConsumerWidget {
                                     'status=${result.status}');
                               } catch (e) {
                                 _log.e('[FIX] Share failed', error: e);
-                                // Fallback: copy to clipboard
                                 await Clipboard.setData(
                                   ClipboardData(text: inviteMessage),
                                 );

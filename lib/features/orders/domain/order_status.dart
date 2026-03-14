@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Order status (pipeline step) domain model.
 class OrderStatus {
   final String id;
   final String organizationId;
@@ -32,7 +31,6 @@ class OrderStatus {
     );
   }
 
-  /// Parse hex color string to Flutter Color.
   Color get materialColor {
     final hex = color.replaceFirst('#', '');
     return Color(int.parse('FF$hex', radix: 16));

@@ -7,17 +7,12 @@ part 'auth_notifier.g.dart';
 
 final _log = AppLogger.getLogger('AuthNotifier');
 
-/// Manages authentication state: login, register, sign-out, reset password.
-///
-/// Uses AsyncValue to expose loading / error / data states to the UI.
 @riverpod
 class AuthNotifier extends _$AuthNotifier {
   @override
   FutureOr<void> build() {
-    // No initial async work — just a state holder.
   }
 
-  /// Sign in with email + password.
   Future<bool> signIn({
     required String email,
     required String password,
@@ -33,7 +28,6 @@ class AuthNotifier extends _$AuthNotifier {
     return !state.hasError;
   }
 
-  /// Register a new account.
   Future<bool> register({
     required String name,
     required String email,
@@ -51,7 +45,6 @@ class AuthNotifier extends _$AuthNotifier {
     return !state.hasError;
   }
 
-  /// Sign out.
   Future<void> signOut() async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
@@ -60,7 +53,6 @@ class AuthNotifier extends _$AuthNotifier {
     });
   }
 
-  /// Send password reset email.
   Future<bool> resetPassword(String email) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
@@ -70,7 +62,6 @@ class AuthNotifier extends _$AuthNotifier {
     return !state.hasError;
   }
 
-  /// Update password (used after password recovery flow).
   Future<bool> updatePassword(String newPassword) async {
     _log.d('[FIX] updatePassword called');
     state = const AsyncLoading();
@@ -81,7 +72,6 @@ class AuthNotifier extends _$AuthNotifier {
     return !state.hasError;
   }
 
-  /// Verify recovery OTP and authenticate.
   Future<bool> verifyRecoveryOtp({
     required String email,
     required String token,
@@ -98,7 +88,6 @@ class AuthNotifier extends _$AuthNotifier {
     return !state.hasError;
   }
 
-  /// Verify email with 6-digit OTP code.
   Future<bool> verifyEmail({
     required String email,
     required String token,
@@ -114,7 +103,6 @@ class AuthNotifier extends _$AuthNotifier {
     return !state.hasError;
   }
 
-  /// Resend email verification OTP code.
   Future<bool> resendVerification(String email) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
@@ -124,7 +112,6 @@ class AuthNotifier extends _$AuthNotifier {
     return !state.hasError;
   }
 
-  /// Sign in with Google OAuth.
   Future<bool> signInWithGoogle() async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
@@ -134,7 +121,6 @@ class AuthNotifier extends _$AuthNotifier {
     return !state.hasError;
   }
 
-  /// Sign in with Apple OAuth.
   Future<bool> signInWithApple() async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {

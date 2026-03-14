@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// Custom page transitions for Deskflow glass UI.
-///
-/// Provides smooth, physics-based transitions that complement
-/// the Liquid Glass aesthetic.
 class DeskflowTransitions {
   DeskflowTransitions._();
 
-  /// Slide-up transition — used for detail screens (order, customer, product).
   static CustomTransitionPage<T> slideUp<T>({
     required GoRouterState state,
     required Widget child,
@@ -38,7 +33,6 @@ class DeskflowTransitions {
     );
   }
 
-  /// Fade transition — used for tab switches and modals.
   static CustomTransitionPage<T> fade<T>({
     required GoRouterState state,
     required Widget child,
@@ -60,7 +54,6 @@ class DeskflowTransitions {
     );
   }
 
-  /// Slide-from-right — used for push navigation (settings, admin).
   static CustomTransitionPage<T> slideRight<T>({
     required GoRouterState state,
     required Widget child,

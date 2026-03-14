@@ -16,13 +16,6 @@ import 'package:deskflow/features/auth/domain/auth_notifier.dart';
 
 final _log = AppLogger.getLogger('RecoveryCodeScreen');
 
-/// Screen for entering the recovery code from email + showing the new password.
-///
-/// Flow:
-/// 1. User enters 6-digit code from recovery email
-/// 2. Code is verified via Supabase OTP (type: recovery)
-/// 3. A new random password is generated & set
-/// 4. The new password is shown on screen for the user to copy
 class RecoveryCodeScreen extends ConsumerStatefulWidget {
   final String email;
 
@@ -43,7 +36,6 @@ class _RecoveryCodeScreenState extends ConsumerState<RecoveryCodeScreen> {
   int _cooldownSeconds = 0;
   Timer? _cooldownTimer;
 
-  /// The generated new password (shown after successful verification).
   String? _newPassword;
   bool _copied = false;
 
@@ -112,7 +104,6 @@ class _RecoveryCodeScreenState extends ConsumerState<RecoveryCodeScreen> {
     }
   }
 
-  /// Generate a random password: 12 chars, mix of letters + digits.
   String _generatePassword() {
     const chars =
         'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -125,7 +116,6 @@ class _RecoveryCodeScreenState extends ConsumerState<RecoveryCodeScreen> {
 
     _log.d('[FIX] Verifying recovery code for ${widget.email}');
 
-    // Step 1: Verify OTP — this authenticates the user.
     final verified =
         await ref.read(authNotifierProvider.notifier).verifyRecoveryOtp(
               email: widget.email,
@@ -136,7 +126,6 @@ class _RecoveryCodeScreenState extends ConsumerState<RecoveryCodeScreen> {
 
     _log.i('[FIX] Recovery OTP verified — generating new password');
 
-    // Step 2: Generate and set new password.
     final password = _generatePassword();
     final updated =
         await ref.read(authNotifierProvider.notifier).updatePassword(password);
@@ -236,7 +225,6 @@ class _RecoveryCodeScreenState extends ConsumerState<RecoveryCodeScreen> {
       children: [
         const SizedBox(height: DeskflowSpacing.xl),
 
-        // Icon
         Container(
           width: 72,
           height: 72,
@@ -264,7 +252,6 @@ class _RecoveryCodeScreenState extends ConsumerState<RecoveryCodeScreen> {
         ),
         const SizedBox(height: DeskflowSpacing.xxl),
 
-        // PIN code input
         GlassCard(
           child: Column(
             children: [
@@ -353,7 +340,6 @@ class _RecoveryCodeScreenState extends ConsumerState<RecoveryCodeScreen> {
 
         const SizedBox(height: DeskflowSpacing.xl),
 
-        // Resend
         TextButton(
           onPressed: canResend ? _handleResend : null,
           child: Text(
@@ -386,7 +372,6 @@ class _RecoveryCodeScreenState extends ConsumerState<RecoveryCodeScreen> {
       children: [
         const SizedBox(height: DeskflowSpacing.xxl),
 
-        // Success icon
         Container(
           width: 80,
           height: 80,
@@ -414,11 +399,9 @@ class _RecoveryCodeScreenState extends ConsumerState<RecoveryCodeScreen> {
         ),
         const SizedBox(height: DeskflowSpacing.lg),
 
-        // Password display card
         GlassCard(
           child: Column(
             children: [
-              // Password text — big, selectable
               SelectableText(
                 _newPassword!,
                 style: DeskflowTypography.h2.copyWith(
@@ -430,7 +413,6 @@ class _RecoveryCodeScreenState extends ConsumerState<RecoveryCodeScreen> {
               ),
               const SizedBox(height: DeskflowSpacing.lg),
 
-              // Copy button
               PillButton.secondary(
                 label: _copied ? 'Скопировано ✓' : 'Скопировать пароль',
                 icon: _copied

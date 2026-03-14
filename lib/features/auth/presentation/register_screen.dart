@@ -18,7 +18,6 @@ import 'package:deskflow/features/profile/domain/profile_providers.dart';
 
 final _log = AppLogger.getLogger('RegisterScreen');
 
-/// Registration screen — create new account.
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
@@ -82,7 +81,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         );
 
     if (success && mounted) {
-      // Attempt avatar upload if photo was picked
       if (_avatarBytes != null) {
         try {
           final repo = ref.read(profileRepositoryProvider);
@@ -101,7 +99,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         }
       }
 
-      // Reset addingAccount flag if was set
       ref.read(addingAccountProvider.notifier).state = false;
 
       final email = Uri.encodeComponent(_emailController.text.trim());
@@ -154,7 +151,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             key: _formKey,
             child: Column(
               children: [
-                // Avatar picker
                 GestureDetector(
                   onTap: _pickAvatar,
                   child: Container(

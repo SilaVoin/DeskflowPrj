@@ -14,7 +14,6 @@ import 'package:deskflow/features/org/domain/org_notifier.dart';
 import 'package:deskflow/features/org/domain/org_providers.dart';
 import 'package:deskflow/features/org/domain/organization.dart';
 
-/// Organization selection screen — shown when user belongs to multiple orgs.
 class OrgSelectionScreen extends ConsumerWidget {
   const OrgSelectionScreen({super.key});
 
@@ -37,7 +36,6 @@ class OrgSelectionScreen extends ConsumerWidget {
               ),
               const SizedBox(height: DeskflowSpacing.xl),
 
-              // Org list from Supabase
               Expanded(
                 child: orgsAsync.when(
                   data: (orgs) {
@@ -86,7 +84,6 @@ class OrgSelectionScreen extends ConsumerWidget {
                 ),
               ),
 
-              // Bottom actions
               PillButton(
                 label: 'Создать организацию',
                 icon: Icons.add_rounded,

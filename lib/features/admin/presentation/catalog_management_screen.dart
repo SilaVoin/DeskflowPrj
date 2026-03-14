@@ -6,7 +6,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:deskflow/core/theme/deskflow_theme.dart';
 import 'package:deskflow/core/utils/app_logger.dart';
 import 'package:deskflow/core/widgets/error_state_widget.dart';
+import 'package:deskflow/core/widgets/floating_island_nav.dart';
 import 'package:deskflow/core/widgets/glass_card.dart';
+import 'package:deskflow/core/widgets/glass_floating_action_button.dart';
 import 'package:deskflow/core/widgets/pill_search_bar.dart';
 import 'package:deskflow/core/widgets/skeleton_loader.dart';
 import 'package:deskflow/features/products/domain/product.dart';
@@ -15,7 +17,6 @@ import 'package:deskflow/features/org/domain/org_providers.dart';
 
 final _log = AppLogger.getLogger('CatalogManagementScreen');
 
-/// Admin catalog management — CRUD products with active/inactive toggles.
 class CatalogManagementScreen extends HookConsumerWidget {
   const CatalogManagementScreen({super.key});
 
@@ -31,14 +32,17 @@ class CatalogManagementScreen extends HookConsumerWidget {
       appBar: AppBar(
         title: const Text('Управление каталогом'),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: DeskflowColors.primarySolid,
-        child: const Icon(Icons.add_rounded),
-        onPressed: () => context.push('/admin/catalog/create'),
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(
+          bottom: FloatingIslandNav.totalHeight(context) + 16,
+        ),
+        child: GlassFloatingActionButton(
+          icon: Icons.add_rounded,
+          onPressed: () => context.push('/admin/catalog/create'),
+        ),
       ),
       body: Column(
         children: [
-          // Search bar
           Padding(
             padding: const EdgeInsets.fromLTRB(
               DeskflowSpacing.lg,
@@ -52,7 +56,6 @@ class CatalogManagementScreen extends HookConsumerWidget {
             ),
           ),
 
-          // Products list
           Expanded(
             child: productsAsync.when(
               data: (paginated) {
@@ -118,7 +121,6 @@ class CatalogManagementScreen extends HookConsumerWidget {
   }
 }
 
-/// Catalog product card with toggle and admin controls.
 class _CatalogProductCard extends StatelessWidget {
   final Product product;
   final VoidCallback onTap;
@@ -136,7 +138,6 @@ class _CatalogProductCard extends StatelessWidget {
       onTap: onTap,
       child: Row(
         children: [
-          // Thumbnail
           Container(
             width: 50,
             height: 50,
@@ -169,7 +170,6 @@ class _CatalogProductCard extends StatelessWidget {
           ),
           const SizedBox(width: DeskflowSpacing.md),
 
-          // Info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -207,7 +207,6 @@ class _CatalogProductCard extends StatelessWidget {
             ),
           ),
 
-          // Active toggle
           Switch(
             value: product.isActive,
             onChanged: (_) => onToggleActive(),
@@ -219,7 +218,6 @@ class _CatalogProductCard extends StatelessWidget {
   }
 }
 
-/// Loading skeleton.
 class _CatalogLoadingSkeleton extends StatelessWidget {
   const _CatalogLoadingSkeleton();
 

@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:deskflow/core/theme/deskflow_theme.dart';
 
-/// Generic placeholder screen for features not yet implemented.
-///
-/// Shows the screen title and a "Coming soon" message.
 class PlaceholderScreen extends StatelessWidget {
   const PlaceholderScreen({
     super.key,

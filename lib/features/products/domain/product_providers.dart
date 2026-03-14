@@ -9,13 +9,11 @@ import 'package:deskflow/features/org/domain/org_providers.dart';
 
 part 'product_providers.g.dart';
 
-/// Product repository singleton.
 @Riverpod(keepAlive: true)
 ProductRepository productRepository(Ref ref) {
   return ProductRepository(ref.watch(supabaseClientProvider));
 }
 
-/// All products for current org — paginated, supports search.
 @riverpod
 class ProductsList extends _$ProductsList {
   static const _pageSize = 20;
@@ -36,7 +34,6 @@ class ProductsList extends _$ProductsList {
     );
   }
 
-  /// Load next page and append to current items.
   Future<void> loadMore() async {
     final current = state.valueOrNull;
     if (current == null || !current.hasMore || current.isLoadingMore) return;
@@ -64,7 +61,6 @@ class ProductsList extends _$ProductsList {
   }
 }
 
-/// Active products only (for adding to orders).
 @riverpod
 Future<List<Product>> activeProducts(Ref ref, {String? search}) async {
   final orgId = ref.watch(currentOrgIdProvider);
@@ -76,7 +72,6 @@ Future<List<Product>> activeProducts(Ref ref, {String? search}) async {
       );
 }
 
-/// Single product detail.
 @riverpod
 Future<Product> productDetail(Ref ref, String productId) async {
   return ref.watch(productRepositoryProvider).getProduct(productId);
